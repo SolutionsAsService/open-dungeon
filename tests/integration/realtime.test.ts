@@ -136,6 +136,17 @@ describe('realtime multiplayer', () => {
     expect((await pl.ack('ok')).ok).toBe(true);
   });
 
+  it('recognises a command resent after reconnecting', async () => {
+    pl.send('across', { type: 'chat.send', body: 'resent-after-reconnect' });
+    await pl.ack('across');
+    pl.ws.close();
+    await pl.connect(sessionId);
+    pl.send('across', { type: 'chat.send', body: 'resent-after-reconnect' });
+    expect((await pl.ack('across')).ok).toBe(true);
+    const snap = await gm.api('GET', '/api/sessions/' + sessionId + '/snapshot');
+    expect(snap.chat.filter((c: any) => c.body === 'resent-after-reconnect')).toHaveLength(1);
+  });
+
   it('reconnects with a full snapshot that reflects the latest state', async () => {
     pl.ws.close();
     const snap = await pl.connect(sessionId);

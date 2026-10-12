@@ -10,7 +10,8 @@ import { Services, CommandError, type Effect, type Audience } from './services';
 import { HttpError } from './errors';
 
 interface Conn { ws: WebSocket; userId: string; role: Role; known: Set<string>; cids: Map<string, Promise<ServerMessage>>; bucket: number; last: number }
-interface Room { conns: Set<Conn>; queue: Promise<unknown> }
+/** cids are remembered per user per room (not per socket) so a command resent after a reconnect is still recognised. */
+interface Room { conns: Set<Conn>; queue: Promise<unknown>; cids: Map<string, Map<string, Promise<ServerMessage>>> }
 
 const RATE = 20, BURST = 60; // commands per second, burst size
 const CID_MEMORY = 256;
@@ -21,7 +22,7 @@ export class Hub {
 
   private room(id: string): Room {
     let r = this.rooms.get(id);
-    if (!r) { r = { conns: new Set(), queue: Promise.resolve() }; this.rooms.set(id, r); }
+    if (!r) { r = { conns: new Set(), queue: Promise.resolve(), cids: new Map() }; this.rooms.set(id, r); }
     return r;
   }
   online(sessionId: string) { return new Set([...(this.rooms.get(sessionId)?.conns ?? [])].map((c) => c.userId)); }
@@ -30,12 +31,17 @@ export class Hub {
     const room = this.room(sessionId);
     const online = this.online(sessionId); online.add(userId);
     const snapshot = await this.svc.snapshot(userId, sessionId, online);
-    const conn: Conn = { ws, userId, role: snapshot.me.role as Role, known: new Set(snapshot.tokens.map((t) => t.id)), cids: new Map(), bucket: BURST, last: Date.now() };
+    if (!room.cids.has(userId)) room.cids.set(userId, new Map());
+    const conn: Conn = { ws, userId, role: snapshot.me.role as Role, known: new Set(snapshot.tokens.map((t) => t.id)), cids: room.cids.get(userId)!, bucket: BURST, last: Date.now() };
     room.conns.add(conn);
     send(ws, { type: 'snapshot', snapshot });
     this.presence(sessionId).catch(() => undefined);
     ws.on('message', (raw) => this.onMessage(conn, sessionId, raw.toString()));
-    ws.on('close', () => { room.conns.delete(conn); if (!room.conns.size) this.rooms.delete(sessionId); else this.presence(sessionId).catch(() => undefined); });
+    ws.on('close', () => {
+      room.conns.delete(conn);
+      if (room.conns.size) this.presence(sessionId).catch(() => undefined);
+      else setTimeout(() => { if (!room.conns.size && this.rooms.get(sessionId) === room) this.rooms.delete(sessionId); }, 5 * 60_000).unref?.();
+    });
   }
 
   private onMessage(conn: Conn, sessionId: string, raw: string) {

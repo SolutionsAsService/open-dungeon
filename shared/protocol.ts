@@ -52,8 +52,8 @@ export const Command = z.discriminatedUnion('type', [
   z.object({ type: z.literal('drawing.clear') }),
   z.object({ type: z.literal('dice.roll'), expression: z.string().min(1).max(200), visibility: Visibility.default('public'), label: z.string().max(60).optional() }),
   z.object({ type: z.literal('chat.send'), body: z.string().trim().min(1).max(2000), visibility: Visibility.default('public') }),
-  z.object({ type: z.literal('init.add'), tokenId: Id.nullable().default(null), name: z.string().min(1).max(60), initiative: z.number().finite().nullable().default(null), hidden: z.boolean().default(false) }),
-  z.object({ type: z.literal('init.update'), id: Id, initiative: z.number().finite().nullable().optional(), name: z.string().min(1).max(60).optional(), hidden: z.boolean().optional() }),
+  z.object({ type: z.literal('init.add'), tokenId: Id.nullable().default(null), name: z.string().min(1).max(60), initiative: z.number().finite().nullable().default(null), rollExpression: z.string().max(60).optional(), hidden: z.boolean().default(false) }),
+  z.object({ type: z.literal('init.update'), id: Id, initiative: z.number().finite().nullable().optional(), rollExpression: z.string().max(60).optional(), name: z.string().min(1).max(60).optional(), hidden: z.boolean().optional() }),
   z.object({ type: z.literal('init.remove'), id: Id }),
   z.object({ type: z.literal('init.advance'), dir: z.union([z.literal(1), z.literal(-1)]) }),
   z.object({ type: z.literal('init.reset') }),
@@ -80,7 +80,7 @@ export interface MemberView { userId: string; displayName: string; role: string;
 export interface SessionSnapshot {
   seq: number;
   me: { id: string; displayName: string; role: string };
-  session: { id: string; name: string; status: string; campaignId: string; campaignName: string };
+  session: { id: string; name: string; status: string; campaignId: string; campaignName: string; rulesetId: string };
   members: MemberView[];
   map: MapView | null;
   tokens: TokenView[];

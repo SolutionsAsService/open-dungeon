@@ -12,6 +12,7 @@ import { Role, can, canEditToken, isGmRole } from '../shared/permissions';
 import { GridConfig, defaultGrid } from '../shared/grid';
 import { isPointRevealed, type FogRegion } from '../shared/fog';
 import { rollDice, DiceError } from '../shared/dice';
+import { getRuleset } from '../shared/rules/registry';
 import type { Command, TokenView, MapView, FogRegionView, DrawingView, ChatView, InitiativeView, SessionSnapshot, ServerEvent, Visibility } from '../shared/protocol';
 
 export type Audience = { kind: 'all' } | { kind: 'gm' } | { kind: 'users'; ids: string[] } | { kind: 'gmAndUsers'; ids: string[] };
@@ -79,7 +80,7 @@ export class Services {
     return role;
   }
   async sessionContext(userId: string, sessionId: string, q: Queryable = this.db) {
-    const s = (await q.query('SELECT gs.*, c.name AS campaign_name FROM game_sessions gs JOIN campaigns c ON c.id = gs.campaign_id WHERE gs.id = $1', [sessionId]))[0];
+    const s = (await q.query('SELECT gs.*, c.name AS campaign_name, c.ruleset_id FROM game_sessions gs JOIN campaigns c ON c.id = gs.campaign_id WHERE gs.id = $1', [sessionId]))[0];
     if (!s) throw notFound('Session not found');
     const role = await this.roleFor(userId, s.campaign_id, q);
     if (!role) throw notFound('Session not found');
@@ -157,7 +158,9 @@ export class Services {
       let mapId = (await t.query('SELECT active_map_id FROM game_sessions WHERE campaign_id = $1 AND active_map_id IS NOT NULL ORDER BY created_at DESC LIMIT 1', [campaignId]))[0]?.active_map_id;
       if (!mapId) {
         mapId = newId('map');
-        await t.query('INSERT INTO maps (id, campaign_id, name, grid) VALUES ($1, $2, $3, $4::jsonb)', [mapId, campaignId, 'Untitled map', JSON.stringify(defaultGrid())]);
+        const rs = getRuleset((await t.query('SELECT ruleset_id FROM campaigns WHERE id = $1', [campaignId]))[0].ruleset_id);
+        const grid = GridConfig.parse({ ...defaultGrid(), unitsPerCell: rs.distance.unitsPerCell, unit: rs.distance.unit, diagonal: rs.distance.diagonal });
+        await t.query('INSERT INTO maps (id, campaign_id, name, grid) VALUES ($1, $2, $3, $4::jsonb)', [mapId, campaignId, 'Untitled map', JSON.stringify(grid)]);
       }
       await t.query('INSERT INTO game_sessions (id, campaign_id, name, active_map_id) VALUES ($1, $2, $3, $4)', [id, campaignId, input.name, mapId]);
       await t.query('INSERT INTO encounters (id, session_id) VALUES ($1, $2)', [newId('enc'), id]);
@@ -248,7 +251,7 @@ export class Services {
     return {
       seq: Number(session.seq),
       me: { id: userId, displayName: me.display_name, role },
-      session: { id: session.id, name: session.name, status: session.status, campaignId: session.campaign_id, campaignName: session.campaign_name },
+      session: { id: session.id, name: session.name, status: session.status, campaignId: session.campaign_id, campaignName: session.campaign_name, rulesetId: session.ruleset_id },
       members, map, tokens, fog, drawings,
       initiative: this.filterInitiative(await this.initiativeFull(sessionId), role),
       chat,
@@ -416,10 +419,14 @@ export class Services {
         if (!can(role, 'initiative.manage')) deny('Only the GM can manage initiative');
         const full = await this.initiativeFull(session.id, t);
         const enc = full.encounterId;
+        const rollInit = (expr: string | undefined) => { if (!expr) return undefined; try { return rollDice(expr).total; } catch (e) { throw new CommandError('invalid', (e as Error).message); } };
         if (cmd.type === 'init.add') {
           if (cmd.tokenId) await loadToken(cmd.tokenId);
-          await t.query('INSERT INTO encounter_participants (id, encounter_id, token_id, name, initiative, hidden, sort_order) VALUES ($1,$2,$3,$4,$5,$6,$7)', [newId('ini'), enc, cmd.tokenId, cmd.name, cmd.initiative, cmd.hidden, full.participants.length]);
+          const rolled = rollInit(cmd.rollExpression);
+          await t.query('INSERT INTO encounter_participants (id, encounter_id, token_id, name, initiative, hidden, sort_order) VALUES ($1,$2,$3,$4,$5,$6,$7)', [newId('ini'), enc, cmd.tokenId, cmd.name, rolled ?? cmd.initiative, cmd.hidden, full.participants.length]);
         } else if (cmd.type === 'init.update') {
+          const rolled = rollInit(cmd.rollExpression);
+          if (rolled !== undefined) (cmd as any).initiative = rolled;
           const r = await t.query('UPDATE encounter_participants SET initiative = CASE WHEN $3 THEN $2 ELSE initiative END, name = COALESCE($4, name), hidden = COALESCE($5, hidden) WHERE id = $1 AND encounter_id = $6 RETURNING id',
             [cmd.id, cmd.initiative ?? null, cmd.initiative !== undefined, cmd.name ?? null, cmd.hidden ?? null, enc]);
           if (!r[0]) throw new CommandError('not_found', 'Combatant not found');

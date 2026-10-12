@@ -28,11 +28,12 @@ describe('campaign → session → table workflow', () => {
   });
 
   it('creates a campaign and a session with a default map', async () => {
-    campaignId = (await svc.createCampaign(gm, { name: 'Lost Mine' })).id;
+    campaignId = (await svc.createCampaign(gm, { name: 'Lost Mine', rulesetId: 'd20-fantasy' })).id;
     sessionId = (await svc.createSession(gm, campaignId, { name: 'Session 1' })).id;
     const snap = await svc.snapshot(gm, sessionId);
     expect(snap.me.role).toBe('owner');
-    expect(snap.map?.grid.type).toBe('square');
+    expect(snap.map?.grid).toMatchObject({ type: 'square', unitsPerCell: 5, unit: 'ft' });
+    expect(snap.session.rulesetId).toBe('d20-fantasy');
     expect((await svc.listCampaigns(gm))[0]).toMatchObject({ id: campaignId, sessionCount: 1 });
   });
 
@@ -118,6 +119,9 @@ describe('campaign → session → table workflow', () => {
     await run(gm, sessionId, { type: 'init.advance', dir: 1 });
     expect((await svc.snapshot(gm, sessionId)).initiative.round).toBe(2);
     await expect(run(player, sessionId, { type: 'init.advance', dir: 1 })).rejects.toMatchObject({ code: 'forbidden' });
+    await run(gm, sessionId, { type: 'init.add', name: 'Rolled', rollExpression: '1d20+100' });
+    const rolled = (await svc.snapshot(gm, sessionId)).initiative.participants.find((x) => x.name === 'Rolled')!;
+    expect(rolled.initiative).toBeGreaterThan(100);
   });
 
   it('keeps GM-only drawings private', async () => {

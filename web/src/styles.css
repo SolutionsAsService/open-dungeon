@@ -1,0 +1,38 @@
+@import "tailwindcss";
+
+/* Design tokens: a warm, low-glare "table" palette. Light theme swaps the same tokens. */
+@theme {
+  --color-table: #14110f;
+  --color-panel: #1e1a17;
+  --color-panel-2: #27221e;
+  --color-line: #3a332d;
+  --color-ink: #ece4d8;
+  --color-ink-dim: #a99c8c;
+  --color-accent: #e0a95b;
+  --color-accent-ink: #1a1208;
+  --color-danger: #e0675b;
+  --color-ok: #7fc28a;
+  --color-gm: #b48cf0;
+  --font-display: "Cinzel", "Iowan Old Style", "Palatino Linotype", Georgia, serif;
+  --font-sans: ui-sans-serif, system-ui, "Segoe UI", Roboto, sans-serif;
+}
+html.light {
+  --color-table: #e9e3d9; --color-panel: #f7f3ec; --color-panel-2: #efe8dc; --color-line: #d3c7b5;
+  --color-ink: #2a221a; --color-ink-dim: #6d5f50; --color-accent: #9a5d14; --color-accent-ink: #fff8ee;
+}
+html { font-size: var(--od-text-scale, 100%); }
+body { @apply bg-table text-ink font-sans antialiased; margin: 0; }
+:focus-visible { outline: 2px solid var(--color-accent); outline-offset: 2px; }
+@media (prefers-reduced-motion: reduce) { * { transition: none !important; animation: none !important; } }
+
+@layer components {
+  .btn { @apply inline-flex items-center justify-center gap-2 rounded-md border border-line bg-panel-2 px-3 py-1.5 text-sm text-ink hover:border-accent disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer; }
+  .btn-primary { @apply border-accent bg-accent text-accent-ink font-semibold hover:brightness-110; }
+  .btn-danger { @apply border-danger text-danger; }
+  .input { @apply w-full rounded-md border border-line bg-table px-2.5 py-1.5 text-sm text-ink placeholder:text-ink-dim focus:border-accent outline-none; }
+  .label { @apply block text-xs font-medium uppercase tracking-wide text-ink-dim mb-1; }
+  .card { @apply rounded-xl border border-line bg-panel p-4; }
+  .tool { @apply flex h-10 w-10 items-center justify-center rounded-md text-ink-dim hover:bg-panel-2 hover:text-ink cursor-pointer; }
+  .tool[aria-pressed="true"] { @apply bg-accent text-accent-ink; }
+  .section-title { @apply text-xs font-semibold uppercase tracking-wider text-ink-dim; }
+}
