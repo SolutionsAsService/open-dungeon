@@ -13,6 +13,7 @@ import { GridConfig, defaultGrid } from '../shared/grid';
 import { isPointRevealed, type FogRegion } from '../shared/fog';
 import { rollDice, DiceError } from '../shared/dice';
 import { getRuleset } from '../shared/rules/registry';
+import { CharacterService } from './characters';
 import type { Command, TokenView, MapView, FogRegionView, DrawingView, ChatView, InitiativeView, SessionSnapshot, ServerEvent, Visibility } from '../shared/protocol';
 
 export type Audience = { kind: 'all' } | { kind: 'gm' } | { kind: 'users'; ids: string[] } | { kind: 'gmAndUsers'; ids: string[] };
@@ -31,7 +32,7 @@ const EVENT_RETENTION = 1000;
 const tokenView = (r: any): TokenView => ({
   id: r.id, mapId: r.map_id, name: r.name, category: r.category, assetId: r.asset_id, color: r.color,
   x: Number(r.x), y: Number(r.y), rotation: Number(r.rotation), size: Number(r.size), hidden: r.hidden, locked: r.locked,
-  ownerIds: r.owner_ids ?? [], hp: r.hp, hpMax: r.hp_max, conditions: r.conditions ?? [], version: r.version,
+  ownerIds: r.owner_ids ?? [], hp: r.hp, hpMax: r.hp_max, conditions: r.conditions ?? [], characterId: r.character_id ?? null, version: r.version,
 });
 const mapView = (r: any): MapView => ({ id: r.id, name: r.name, backgroundAssetId: r.background_asset_id, width: r.width, height: r.height, grid: GridConfig.parse(r.grid), fogEnabled: r.fog_enabled, version: r.version });
 const fogView = (r: any): FogRegionView => ({ id: r.id, mode: r.mode, shape: r.shape });
@@ -49,7 +50,8 @@ export function canSee(role: Role | null, userId: string, visibility: Visibility
 }
 
 export class Services {
-  constructor(public db: Db, public storage: Storage, public opts: { maxUploadBytes: number }) {}
+  characters: CharacterService;
+  constructor(public db: Db, public storage: Storage, public opts: { maxUploadBytes: number }) { this.characters = new CharacterService(this); }
 
   // ---------- identity ----------
   /** Development sign-in: creates a user for a display name and returns an opaque session token. */
@@ -333,16 +335,17 @@ export class Services {
         const tok = await loadToken(cmd.id);
         if (!canEditToken(role, userId, tok)) deny('You can only edit your own tokens');
         const p = cmd.patch;
-        const gmOnlyFields: (keyof typeof p)[] = ['hidden', 'locked', 'ownerIds', 'category'];
-        if (!isGmRole(role) && gmOnlyFields.some((k) => p[k] !== undefined)) deny('Only the GM can change visibility, locking, ownership or category');
+        const gmOnlyFields: (keyof typeof p)[] = ['hidden', 'locked', 'ownerIds', 'category', 'characterId'];
+        if (!isGmRole(role) && gmOnlyFields.some((k) => p[k] !== undefined)) deny('Only the GM can change visibility, locking, ownership, category or linked character');
         if (cmd.baseVersion !== tok.version) throw new CommandError('stale', 'This token changed before your edit arrived', tok);
-        const cols: Record<string, string> = { name: 'name', category: 'category', color: 'color', rotation: 'rotation', size: 'size', hidden: 'hidden', locked: 'locked', ownerIds: 'owner_ids', hp: 'hp', hpMax: 'hp_max', conditions: 'conditions', assetId: 'asset_id' };
+        const cols: Record<string, string> = { name: 'name', category: 'category', color: 'color', rotation: 'rotation', size: 'size', hidden: 'hidden', locked: 'locked', ownerIds: 'owner_ids', hp: 'hp', hpMax: 'hp_max', conditions: 'conditions', assetId: 'asset_id', characterId: 'character_id' };
         const sets: string[] = []; const vals: unknown[] = [cmd.id];
         for (const [k, col] of Object.entries(cols)) if ((p as any)[k] !== undefined) { vals.push((p as any)[k]); sets.push(col + ' = $' + vals.length); }
         if (p.ownerIds) {
           const ok = await t.query('SELECT user_id FROM campaign_members WHERE campaign_id = $1 AND user_id = ANY($2)', [session.campaign_id, p.ownerIds]);
           if (ok.length !== new Set(p.ownerIds).size) throw new CommandError('invalid', 'Owners must be campaign members');
         }
+        if (p.characterId && !(await t.query('SELECT 1 FROM characters WHERE id = $1 AND campaign_id = $2', [p.characterId, session.campaign_id]))[0]) throw new CommandError('invalid', 'Character not found in this campaign');
         if (!sets.length) return [];
         const r = (await t.query('UPDATE tokens SET ' + sets.join(', ') + ', version = version + 1, updated_at = now() WHERE id = $1 RETURNING *', vals))[0];
         return [await this.tokenEffect(t, mapId, [tokenView(r)])];

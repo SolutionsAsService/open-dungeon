@@ -16,7 +16,11 @@
 | gm | invite, manage sessions, edit maps/fog/tokens/initiative, see hidden data, GM-only drawings and rolls |
 | assistant_gm | GM table powers, but cannot invite or manage sessions |
 | player | move/edit tokens they own (unless locked), roll, chat, draw public annotations, measure |
-| spectator | read-only (no rolls, chat or drawings) |
+| spectator | read-only (no rolls, chat, drawings or characters) |
+
+Characters: GMs see and edit every character in the campaign and assign/transfer them; players see and edit only
+characters they own and can create characters for themselves; other characters are 404 to them. Linking a token to a
+character is GM-only and limited to characters of the same campaign. Sheet edits carry `baseVersion` (409 on conflict).
 
 ## Authentication (current: development strategy)
 - `POST /api/auth/dev` creates a user for a display name and sets `od_session` (HttpOnly, SameSite=Lax,

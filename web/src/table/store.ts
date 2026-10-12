@@ -32,6 +32,8 @@ export interface TableState {
   fogMode: 'reveal' | 'hide';
   newToken: { name: string; category: string; color: string };
   fatalError: string | null;
+  panelTab: 'chat' | 'turns' | 'party' | 'sheets';
+  openCharacterId: string | null;
 }
 
 const emptyInit: InitiativeView = { round: 1, turnIndex: 0, active: false, activeId: null, participants: [] };
@@ -40,6 +42,7 @@ export const useTable = create<TableState>(() => ({
   conn: 'connecting', pending: 0, seq: 0, tool: 'select', selectedId: null, pings: [], toast: null,
   drawColor: '#e0a95b', drawWidth: 4, drawGmOnly: false, drawTemporary: false, fogMode: 'reveal',
   newToken: { name: 'Token', category: 'npc', color: '#c0392b' }, fatalError: null,
+  panelTab: 'chat', openCharacterId: null,
 }));
 
 export const isGm = (s: Pick<TableState, 'me'>) => !!s.me && ['owner', 'gm', 'assistant_gm'].includes(s.me.role);

@@ -4,18 +4,21 @@ import type { TableSocket } from './socket';
 import type { TableEngine } from './engine';
 import type { ChatView, TokenView } from '../../../shared/protocol';
 import { getRuleset } from '../../../shared/rules/registry';
-import { uploadImage } from '../api';
+import { uploadImage, api } from '../api';
+import { CharacterList } from '../characters/CharacterList';
+import type { CharacterView } from '../../../shared/characters';
 
-type Tab = 'chat' | 'turns' | 'party';
+type Tab = 'chat' | 'turns' | 'party' | 'sheets';
 
 export function SidePanel({ socket, engine }: { socket: TableSocket; engine: TableEngine | null }) {
-  const [tab, setTab] = useState<Tab>('chat');
+  const tab = useTable((s) => s.panelTab);
+  const setTab = (t: Tab) => useTable.setState({ panelTab: t });
   const selected = useTable((s) => (s.selectedId ? s.tokens[s.selectedId] : null));
   return (
     <aside className="flex w-80 shrink-0 flex-col border-l border-line bg-panel" aria-label="Side panel">
       {selected && <Inspector key={selected.id} token={selected} socket={socket} engine={engine} />}
       <div role="tablist" className="flex border-b border-line">
-        {(['chat', 'turns', 'party'] as Tab[]).map((t) => (
+        {(['chat', 'turns', 'party', 'sheets'] as Tab[]).map((t) => (
           <button key={t} role="tab" aria-selected={tab === t} onClick={() => setTab(t)} className={'flex-1 py-2 text-xs font-semibold uppercase tracking-wider ' + (tab === t ? 'border-b-2 border-accent text-ink' : 'text-ink-dim hover:text-ink')}>
             {t === 'turns' ? 'Turn order' : t}
           </button>
@@ -25,8 +28,32 @@ export function SidePanel({ socket, engine }: { socket: TableSocket; engine: Tab
         {tab === 'chat' && <Chat socket={socket} />}
         {tab === 'turns' && <Initiative socket={socket} />}
         {tab === 'party' && <Party engine={engine} />}
+        {tab === 'sheets' && <Sheets />}
       </div>
     </aside>
+  );
+}
+
+function Sheets() {
+  const session = useTable((s) => s.session);
+  const me = useTable((s) => s.me);
+  const members = useTable((s) => s.members);
+  const openId = useTable((s) => s.openCharacterId);
+  if (!session || !me) return null;
+  return <div className="h-full overflow-y-auto"><CharacterList campaignId={session.campaignId} role={me.role} members={members} openId={openId} onOpen={(id) => useTable.setState({ openCharacterId: id })} /></div>;
+}
+
+/** GM-only picker linking a token to a campaign character. */
+function CharacterLink({ token, onPick }: { token: TokenView; onPick: (id: string | null) => void }) {
+  const campaignId = useTable((s) => s.session?.campaignId);
+  const [list, setList] = useState<CharacterView[]>([]);
+  useEffect(() => { if (campaignId) api<{ characters: CharacterView[] }>('GET', '/api/campaigns/' + campaignId + '/characters').then((r) => setList(r.characters)).catch(() => undefined); }, [campaignId]);
+  return (
+    <label><span className="label">Character sheet</span>
+      <select className="input" value={token.characterId ?? ''} onChange={(e) => onPick(e.target.value || null)} aria-label="Linked character">
+        <option value="">None</option>
+        {list.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
+      </select></label>
   );
 }
 
@@ -70,7 +97,9 @@ function Inspector({ token, socket, engine }: { token: TokenView; socket: TableS
           return <button key={c.id} disabled={!canEdit} aria-pressed={on} className={'rounded-full border px-2 py-0.5 text-xs ' + (on ? 'border-accent bg-accent/20' : 'border-line text-ink-dim')} onClick={() => patch({ conditions: on ? token.conditions.filter((x) => x !== c.id) : [...token.conditions, c.id] })}>{c.label}</button>;
         })}</div>
       </div>
+      {token.characterId && <button className="btn mt-2 w-full" onClick={() => useTable.setState({ panelTab: 'sheets', openCharacterId: token.characterId })}>Open character sheet</button>}
       {gm && <div className="mt-2 grid gap-2">
+        <CharacterLink token={token} onPick={(id) => patch({ characterId: id })} />
         <label><span className="label">Controlled by</span>
           <select className="input" multiple size={Math.min(4, Math.max(2, players.length))} value={token.ownerIds} onChange={(e) => patch({ ownerIds: [...e.target.selectedOptions].map((o) => o.value) })} aria-label="Players who control this token">
             {players.length === 0 && <option disabled>Invite players first</option>}

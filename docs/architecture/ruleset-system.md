@@ -26,7 +26,7 @@ so a broken module fails at startup and in `tests/unit/rulesets.test.ts`, not at
 | Inspector conditions, HP fields | `conditions`, `manifest.capabilities.health` |
 | Dice bar presets | `rollPresets` |
 | "Add to turns" / Turn order tab | `encounter` (formula rolled server-side; tab explains when a system has no turn order) |
-| Character sheets | `sheet.sections` (see checklist for status) |
+| Character sheets (campaign page + table "Sheets" tab) | `sheet.sections` — rendered by `web/src/characters/CharacterSheet.tsx`, validated server-side by `validateSheetPatch` |
 
 Unknown ruleset ids fall back to `generic` (`getRuleset`).
 

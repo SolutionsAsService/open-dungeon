@@ -10,6 +10,7 @@ import { Services } from './services';
 import { Hub } from './hub';
 import { HttpError, badRequest, notFound, unauthorized } from './errors';
 import { Role } from '../shared/permissions';
+import { CharacterCreate, CharacterUpdate } from '../shared/characters';
 
 const COOKIE = 'od_session';
 const JSON_LIMIT = 64 * 1024;
@@ -81,6 +82,18 @@ export function createApp(svc: Services, opts: { staticDir?: string | null; secu
     const name = String(c.req.headers['x-filename'] ?? '').slice(0, 120);
     return svc.uploadImage(u.id, c.params.id, data, { name, kind: String(c.url.searchParams.get('kind') ?? 'image').slice(0, 32) });
   });
+  // ---- characters (authorization inside CharacterService) ----
+  route('GET', '/api/campaigns/:id/characters', async (c) => ({ characters: await svc.characters.list((await me(c)).id, c.params.id) }));
+  route('POST', '/api/campaigns/:id/characters', async (c) => {
+    const u = await me(c);
+    return svc.characters.create(u.id, c.params.id, await body(c, CharacterCreate));
+  });
+  route('GET', '/api/characters/:id', async (c) => (await svc.characters.get((await me(c)).id, c.params.id)).character);
+  route('PATCH', '/api/characters/:id', async (c) => {
+    const u = await me(c);
+    return svc.characters.update(u.id, c.params.id, await body(c, CharacterUpdate));
+  });
+  route('DELETE', '/api/characters/:id', async (c) => svc.characters.remove((await me(c)).id, c.params.id));
   route('GET', '/api/invites/:token', async (c) => svc.previewInvite(c.params.token));
   route('POST', '/api/invites/:token/accept', async (c) => svc.acceptInvite((await me(c)).id, c.params.token));
 

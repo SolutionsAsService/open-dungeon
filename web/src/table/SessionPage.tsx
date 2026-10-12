@@ -22,7 +22,7 @@ export function SessionPage({ sessionId }: { sessionId: string; me: Me }) {
   const toastMsg = useTable((s) => s.toast);
 
   useEffect(() => {
-    useTable.setState({ loaded: false, fatalError: null, tokens: {}, chat: [], selectedId: null, tool: 'select' });
+    useTable.setState({ loaded: false, fatalError: null, tokens: {}, chat: [], selectedId: null, tool: 'select', panelTab: 'chat', openCharacterId: null });
     socket.connect();
     const eng = new TableEngine(socket);
     eng.init(host.current!).then(() => setEngine(eng));

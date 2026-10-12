@@ -4,7 +4,7 @@ Schema source of truth: `server/db/migrations/*.sql` (applied in filename order,
 `schema_migrations`). Identifiers are text with a type prefix and 72 random bits (`cmp_…`, `ses_…`,
 `tok_…`; `server/ids.ts`) so exported data stays portable between databases.
 
-## Tables (0001_init.sql)
+## Tables (0001_init.sql unless noted)
 | Table | Purpose | Key columns / constraints |
 |---|---|---|
 | users | accounts | display_name 1–40 chars |
@@ -15,13 +15,14 @@ Schema source of truth: `server/db/migrations/*.sql` (applied in filename order,
 | assets | uploaded files' metadata | mime (sniffed), bytes, width, height, storage_key, license, attribution |
 | maps | static map config | background_asset_id, width, height, grid (JSONB, validated by `GridConfig`), fog_enabled, version |
 | game_sessions | one table event | status ∈ open, paused, closed; active_map_id; seq (per-session event counter) |
-| tokens | placed token instances (hot state) | map_id, x, y, rotation, size, hidden, locked, owner_ids TEXT[], hp, hp_max, conditions TEXT[], attributes JSONB, version |
+| tokens | placed token instances (hot state) | map_id, x, y, rotation, size, hidden, locked, owner_ids TEXT[], hp, hp_max, conditions TEXT[], attributes JSONB, character_id (0002, nullable link), version |
 | fog_regions | ordered reveal/hide shapes | mode ∈ reveal, hide; shape JSONB (`FogShape`) |
 | drawings | annotations | author_id, gm_only, shape JSONB (`DrawingShape`), expires_at (temporary) |
 | dice_rolls | server-authoritative rolls | expression, result JSONB (per-die terms + label), total, visibility ∈ public, gm, self |
 | chat_messages | chat log | kind ∈ text, roll, system; roll_id; visibility |
 | encounters | one per session | round, turn_index, active |
 | encounter_participants | turn order entries | token_id (nullable), name, initiative, hidden, sort_order |
+| characters (0002) | universal character record | campaign_id, owner_id (nullable = GM character), name, portrait_asset_id, ruleset_id, sheet_schema_version, data JSONB (ruleset sheet values), version |
 | session_events | bounded audit log | PK (session_id, seq); type, actor_id, payload (target id only — never chat/note text) |
 
 Indexes exist on every foreign key used for lookups (campaign, map, session).
@@ -36,5 +37,8 @@ Indexes exist on every foreign key used for lookups (campaign, map, session).
 - **Deletes.** Campaign deletion cascades to members, maps, sessions and their children; assets keep their row
   (`campaign_id SET NULL`) because storage objects need explicit cleanup. Deleting a token cascades to its
   encounter participants.
-- **Not yet modelled** (see roadmap): characters/character data, journals, handouts, asset collections,
+- **Characters.** Common fields are columns; sheet values are a JSONB map whose keys and types are validated
+  against the campaign ruleset's sheet sections (`shared/characters.ts`) on every write. Unknown keys are rejected;
+  `sheet_schema_version` records which layout last wrote the data so future migrations can convert it.
+- **Not yet modelled** (see roadmap): journals, handouts, asset collections,
   ruleset versions in the database (rulesets are code modules today), per-session member overrides.

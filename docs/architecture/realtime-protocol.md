@@ -57,6 +57,11 @@ Services return *effects* rather than raw broadcasts:
 - Token moves are optimistic and rolled back on refusal.
 - The top bar shows connecting / connected / reconnecting / offline plus "saving N" / "N changes pending" / "saved".
 
+## Not realtime (yet)
+Character sheets are read and written over HTTP (`/api/campaigns/:id/characters`, `/api/characters/:id` with GET,
+PATCH, DELETE). Concurrent edits are caught by `baseVersion` (409) and the sheet reloads; other viewers see changes
+when they reopen the sheet.
+
 ## HTTP endpoints that emit realtime effects
 `POST /api/sessions/:id/status` (broadcast `session.status` + resync) and `POST /api/sessions/:id/background`
 (`map.updated`). Uploads themselves (`POST /api/campaigns/:id/assets`) are plain HTTP.

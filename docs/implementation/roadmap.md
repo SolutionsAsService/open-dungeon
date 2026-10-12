@@ -11,12 +11,12 @@ docs/implementation/checklist.md.
 | 3 Multiplayer | realtime, presence, authoritative updates, reconnection, conflicts, filtering, tests | done |
 | 4 Gameplay | dice, history, measurement (paths), drawing, initiative, chat, HP/conditions | done; area templates in progress |
 | 5 GM tools | fog (rect), hidden tokens, GM-only drawings, pause/close/reopen | partial: polygon/brush fog, journals, handouts, layers pending |
-| 6 Rules | ruleset interfaces, demo + homebrew modules | partial: character sheets pending |
+| 6 Rules | ruleset interfaces, demo + homebrew modules, ruleset-driven character sheets | done (ruleset editor later) |
 | 7 Assets & import/export | upload pipeline | partial: asset library page, export/import, extra storage adapters pending |
 | 8 Production | CI, E2E, docs | partial: real auth provider, HTTP rate limits, fog-masked backgrounds pending |
 
 ## Next, in order
-1. Character sheets driven by ruleset sheet sections
+1. ~~Character sheets driven by ruleset sheet sections~~ (done)
 2. Journals and handouts (GM-private, shared, per-player reveal)
 3. Polygon and brush fog
 4. Area templates (cone, circle, line, square)

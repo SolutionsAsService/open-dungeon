@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { api } from '../api';
 import { navigate, Link } from '../router';
+import { CharacterList } from '../characters/CharacterList';
 
 interface Camp { id: string; name: string; description: string; role: string; rulesetId: string; members: { userId: string; displayName: string; role: string }[]; sessions: { id: string; name: string; status: string; updatedAt: string }[] }
 
@@ -41,6 +42,8 @@ export function CampaignPage({ id }: { id: string }) {
             <button className="btn btn-primary whitespace-nowrap" disabled={!sessionName.trim()}>New session</button>
           </form>
         )}
+        <h2 className="section-title mt-6 mb-2">Characters</h2>
+        <div className="card p-0"><CharacterList campaignId={c.id} role={c.role} members={c.members} /></div>
       </section>
       <aside className="grid content-start gap-4">
         <div className="card">

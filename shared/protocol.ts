@@ -27,6 +27,7 @@ export const TokenPatch = z.object({
   hpMax: z.number().int().min(0).max(100000).nullable().optional(),
   conditions: z.array(z.string().min(1).max(32)).max(20).optional(),
   assetId: Id.nullable().optional(),
+  characterId: Id.nullable().optional(),
 }).strict();
 export type TokenPatch = z.infer<typeof TokenPatch>;
 
@@ -68,7 +69,7 @@ export type ClientMessage = z.infer<typeof ClientMessage>;
 export interface TokenView {
   id: string; mapId: string; name: string; category: string; assetId: string | null; color: string;
   x: number; y: number; rotation: number; size: number; hidden: boolean; locked: boolean;
-  ownerIds: string[]; hp: number | null; hpMax: number | null; conditions: string[]; version: number;
+  ownerIds: string[]; hp: number | null; hpMax: number | null; conditions: string[]; characterId: string | null; version: number;
 }
 export interface MapView { id: string; name: string; backgroundAssetId: string | null; width: number; height: number; grid: z.infer<typeof GridConfig>; fogEnabled: boolean; version: number }
 export interface FogRegionView { id: string; mode: 'reveal' | 'hide'; shape: z.infer<typeof FogShape> }

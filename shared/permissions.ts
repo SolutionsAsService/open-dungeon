@@ -11,15 +11,16 @@ export type Capability =
   | 'campaign.manage' | 'campaign.invite' | 'session.manage'
   | 'map.edit' | 'token.create' | 'token.edit_any' | 'token.edit_owned' | 'token.see_hidden'
   | 'fog.edit' | 'fog.see_through' | 'initiative.manage' | 'dice.roll' | 'dice.roll_gm'
-  | 'chat.send' | 'drawing.create' | 'drawing.create_gm' | 'notes.gm_read' | 'measure';
+  | 'chat.send' | 'drawing.create' | 'drawing.create_gm' | 'notes.gm_read' | 'measure'
+  | 'character.manage' | 'character.create_own';
 
-const GM: Capability[] = ['campaign.invite', 'session.manage', 'map.edit', 'token.create', 'token.edit_any', 'token.edit_owned', 'token.see_hidden', 'fog.edit', 'fog.see_through', 'initiative.manage', 'dice.roll', 'dice.roll_gm', 'chat.send', 'drawing.create', 'drawing.create_gm', 'notes.gm_read', 'measure'];
+const GM: Capability[] = ['campaign.invite', 'session.manage', 'map.edit', 'token.create', 'token.edit_any', 'token.edit_owned', 'token.see_hidden', 'fog.edit', 'fog.see_through', 'initiative.manage', 'dice.roll', 'dice.roll_gm', 'chat.send', 'drawing.create', 'drawing.create_gm', 'notes.gm_read', 'measure', 'character.manage', 'character.create_own'];
 
 export const ROLE_CAPABILITIES: Record<Role, ReadonlySet<Capability>> = {
   owner: new Set<Capability>([...GM, 'campaign.manage']),
   gm: new Set<Capability>(GM),
   assistant_gm: new Set<Capability>(GM.filter((c) => c !== 'session.manage' && c !== 'campaign.invite')),
-  player: new Set<Capability>(['token.edit_owned', 'dice.roll', 'chat.send', 'drawing.create', 'measure']),
+  player: new Set<Capability>(['token.edit_owned', 'dice.roll', 'chat.send', 'drawing.create', 'measure', 'character.create_own']),
   spectator: new Set<Capability>([]),
 };
 
