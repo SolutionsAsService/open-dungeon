@@ -11,6 +11,7 @@ import { Hub } from './hub';
 import { HttpError, badRequest, notFound, unauthorized } from './errors';
 import { Role } from '../shared/permissions';
 import { CharacterCreate, CharacterUpdate } from '../shared/characters';
+import { JournalCreate, JournalUpdate } from '../shared/journal';
 
 const COOKIE = 'od_session';
 const JSON_LIMIT = 64 * 1024;
@@ -94,6 +95,22 @@ export function createApp(svc: Services, opts: { staticDir?: string | null; secu
     return svc.characters.update(u.id, c.params.id, await body(c, CharacterUpdate));
   });
   route('DELETE', '/api/characters/:id', async (c) => svc.characters.remove((await me(c)).id, c.params.id));
+  // ---- journals & handouts (authorization inside JournalService; changes pushed live to open tables) ----
+  route('GET', '/api/campaigns/:id/journal', async (c) => ({ entries: await svc.journal.list((await me(c)).id, c.params.id) }));
+  route('POST', '/api/campaigns/:id/journal', async (c) => {
+    const u = await me(c);
+    const ch = await svc.journal.create(u.id, c.params.id, await body(c, JournalCreate));
+    hub.journalChanged(ch);
+    return ch.after;
+  });
+  route('GET', '/api/journal/:id', async (c) => (await svc.journal.get((await me(c)).id, c.params.id)).entry);
+  route('PATCH', '/api/journal/:id', async (c) => {
+    const u = await me(c);
+    const ch = await svc.journal.update(u.id, c.params.id, await body(c, JournalUpdate));
+    hub.journalChanged(ch);
+    return ch.after;
+  });
+  route('DELETE', '/api/journal/:id', async (c) => { hub.journalChanged(await svc.journal.remove((await me(c)).id, c.params.id)); return { ok: true }; });
   route('GET', '/api/invites/:token', async (c) => svc.previewInvite(c.params.token));
   route('POST', '/api/invites/:token/accept', async (c) => svc.acceptInvite((await me(c)).id, c.params.token));
 

@@ -25,7 +25,7 @@ export function App() {
   if (session) return <SessionPage sessionId={session.id} me={me} />;
   const campaign = match('/campaigns/:id', path);
   let page;
-  if (campaign) page = <CampaignPage id={campaign.id} />;
+  if (campaign) page = <CampaignPage id={campaign.id} me={me} />;
   else if (path === '/settings') page = <SettingsPage />;
   else if (path === '/rulesets') page = <RulesetsPage />;
   else if (path === '/' || path === '/dashboard' || path === '/campaigns') page = <Dashboard />;
