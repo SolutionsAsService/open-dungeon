@@ -3,6 +3,7 @@
  * camera) lives alongside but is never sent. High-frequency pointer state stays inside the canvas engine.
  */
 import { create } from 'zustand';
+import type { JournalView } from '../../../shared/journal';
 import type { SessionSnapshot, ServerEvent, TokenView, MapView, FogRegionView, DrawingView, ChatView, InitiativeView, MemberView } from '../../../shared/protocol';
 
 export type Tool = 'select' | 'pan' | 'measure' | 'draw' | 'erase' | 'token' | 'fog' | 'ping';
@@ -32,8 +33,11 @@ export interface TableState {
   fogMode: 'reveal' | 'hide';
   newToken: { name: string; category: string; color: string };
   fatalError: string | null;
-  panelTab: 'chat' | 'turns' | 'party' | 'sheets';
+  panelTab: 'chat' | 'turns' | 'party' | 'sheets' | 'journal';
   openCharacterId: string | null;
+  /** Journal entries this user may read (null until loaded); kept live by journal.* events. */
+  journal: JournalView[] | null;
+  openJournalId: string | null;
 }
 
 const emptyInit: InitiativeView = { round: 1, turnIndex: 0, active: false, activeId: null, participants: [] };
@@ -42,8 +46,15 @@ export const useTable = create<TableState>(() => ({
   conn: 'connecting', pending: 0, seq: 0, tool: 'select', selectedId: null, pings: [], toast: null,
   drawColor: '#e0a95b', drawWidth: 4, drawGmOnly: false, drawTemporary: false, fogMode: 'reveal',
   newToken: { name: 'Token', category: 'npc', color: '#c0392b' }, fatalError: null,
-  panelTab: 'chat', openCharacterId: null,
+  panelTab: 'chat', openCharacterId: null, journal: null, openJournalId: null,
 }));
+
+export function upsertJournal(e: JournalView) {
+  useTable.setState((st) => ({ journal: [e, ...(st.journal ?? []).filter((x) => x.id !== e.id)] }));
+}
+export function removeJournal(id: string) {
+  useTable.setState((st) => ({ journal: (st.journal ?? []).filter((x) => x.id !== id), openJournalId: st.openJournalId === id ? null : st.openJournalId }));
+}
 
 export const isGm = (s: Pick<TableState, 'me'>) => !!s.me && ['owner', 'gm', 'assistant_gm'].includes(s.me.role);
 export const toast = (text: string, kind: 'error' | 'info' = 'error') => useTable.setState({ toast: { text, kind, at: Date.now() } });
@@ -72,6 +83,13 @@ export function applyEvent(seq: number, e: ServerEvent) {
       case 'presence': next.members = e.members; break;
       case 'ping': next.pings = [...st.pings.filter((p) => Date.now() - p.at < 3000), { id: ++pingId, x: e.x, y: e.y, color: e.color, at: Date.now() }]; break;
       case 'session.status': if (st.session) next.session = { ...st.session, status: e.status }; break;
+      case 'journal.upsert': {
+        const known = st.journal?.some((x) => x.id === e.entry.id);
+        next.journal = [e.entry, ...(st.journal ?? []).filter((x) => x.id !== e.entry.id)];
+        if (!known && st.journal && e.entry.authorId !== st.me?.id) next.toast = { text: (e.entry.kind === 'handout' ? 'New handout: ' : 'Shared with you: ') + e.entry.title, kind: 'info', at: Date.now() };
+        break;
+      }
+      case 'journal.remove': next.journal = (st.journal ?? []).filter((x) => x.id !== e.id); if (st.openJournalId === e.id) next.openJournalId = null; break;
     }
     return next;
   });

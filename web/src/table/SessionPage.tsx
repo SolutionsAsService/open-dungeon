@@ -9,6 +9,8 @@ import { DiceBar } from './DiceBar';
 import { MapSetup } from './MapSetup';
 import type { Me } from '../App';
 import { Link } from '../router';
+import { api } from '../api';
+import type { JournalView } from '../../../shared/journal';
 
 export function SessionPage({ sessionId }: { sessionId: string; me: Me }) {
   const host = useRef<HTMLDivElement>(null);
@@ -22,12 +24,17 @@ export function SessionPage({ sessionId }: { sessionId: string; me: Me }) {
   const toastMsg = useTable((s) => s.toast);
 
   useEffect(() => {
-    useTable.setState({ loaded: false, fatalError: null, tokens: {}, chat: [], selectedId: null, tool: 'select', panelTab: 'chat', openCharacterId: null });
+    useTable.setState({ loaded: false, fatalError: null, tokens: {}, chat: [], selectedId: null, tool: 'select', panelTab: 'chat', openCharacterId: null, journal: null, openJournalId: null });
     socket.connect();
     const eng = new TableEngine(socket);
     eng.init(host.current!).then(() => setEngine(eng));
     return () => { socket.close(); eng.destroy(); };
   }, [socket]);
+  const campaignId = useTable((s) => s.session?.campaignId);
+  useEffect(() => {
+    if (!campaignId) return;
+    api<{ entries: JournalView[] }>('GET', '/api/campaigns/' + campaignId + '/journal').then((r) => useTable.setState({ journal: r.entries })).catch(() => undefined);
+  }, [campaignId]);
   useEffect(() => { if (!toastMsg) return; const t = setTimeout(() => useTable.setState({ toast: null }), 4000); return () => clearTimeout(t); }, [toastMsg]);
 
   if (fatal) return <div className="grid h-screen place-items-center"><div className="card text-center"><p role="alert">{fatal}</p><Link to="/" className="btn mt-3">Back to campaigns</Link></div></div>;

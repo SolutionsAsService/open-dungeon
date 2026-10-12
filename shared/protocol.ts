@@ -6,6 +6,7 @@
 import { z } from 'zod';
 import { GridConfig } from './grid';
 import { FogShape } from './fog';
+import type { JournalView } from './journal';
 
 const Id = z.string().min(1).max(64);
 const Coord = z.number().finite().min(-100000).max(100000);
@@ -108,4 +109,7 @@ export type ServerEvent =
   | { type: 'initiative.updated'; initiative: InitiativeView }
   | { type: 'presence'; members: MemberView[] }
   | { type: 'ping'; x: number; y: number; userId: string; color: string }
-  | { type: 'session.status'; status: string };
+  | { type: 'session.status'; status: string }
+  /** Campaign-level (not part of the session's seq order; delivered with seq 0), filtered per recipient. */
+  | { type: 'journal.upsert'; entry: JournalView }
+  | { type: 'journal.remove'; id: string };

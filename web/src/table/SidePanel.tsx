@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
-import { useTable, isGm } from './store';
+import { useTable, isGm, upsertJournal, removeJournal } from './store';
+import { Journal } from '../journal/Journal';
 import type { TableSocket } from './socket';
 import type { TableEngine } from './engine';
 import type { ChatView, TokenView } from '../../../shared/protocol';
@@ -8,7 +9,7 @@ import { uploadImage, api } from '../api';
 import { CharacterList } from '../characters/CharacterList';
 import type { CharacterView } from '../../../shared/characters';
 
-type Tab = 'chat' | 'turns' | 'party' | 'sheets';
+type Tab = 'chat' | 'turns' | 'party' | 'sheets' | 'journal';
 
 export function SidePanel({ socket, engine }: { socket: TableSocket; engine: TableEngine | null }) {
   const tab = useTable((s) => s.panelTab);
@@ -18,7 +19,7 @@ export function SidePanel({ socket, engine }: { socket: TableSocket; engine: Tab
     <aside className="flex w-80 shrink-0 flex-col border-l border-line bg-panel" aria-label="Side panel">
       {selected && <Inspector key={selected.id} token={selected} socket={socket} engine={engine} />}
       <div role="tablist" className="flex border-b border-line">
-        {(['chat', 'turns', 'party', 'sheets'] as Tab[]).map((t) => (
+        {(['chat', 'turns', 'party', 'sheets', 'journal'] as Tab[]).map((t) => (
           <button key={t} role="tab" aria-selected={tab === t} onClick={() => setTab(t)} className={'flex-1 py-2 text-xs font-semibold uppercase tracking-wider ' + (tab === t ? 'border-b-2 border-accent text-ink' : 'text-ink-dim hover:text-ink')}>
             {t === 'turns' ? 'Turn order' : t}
           </button>
@@ -29,6 +30,7 @@ export function SidePanel({ socket, engine }: { socket: TableSocket; engine: Tab
         {tab === 'turns' && <Initiative socket={socket} />}
         {tab === 'party' && <Party engine={engine} />}
         {tab === 'sheets' && <Sheets />}
+        {tab === 'journal' && <JournalTab />}
       </div>
     </aside>
   );
@@ -41,6 +43,16 @@ function Sheets() {
   const openId = useTable((s) => s.openCharacterId);
   if (!session || !me) return null;
   return <div className="h-full overflow-y-auto"><CharacterList campaignId={session.campaignId} role={me.role} members={members} openId={openId} onOpen={(id) => useTable.setState({ openCharacterId: id })} /></div>;
+}
+
+function JournalTab() {
+  const session = useTable((s) => s.session);
+  const me = useTable((s) => s.me);
+  const members = useTable((s) => s.members);
+  const entries = useTable((s) => s.journal);
+  const openId = useTable((s) => s.openJournalId);
+  if (!session || !me) return null;
+  return <div className="h-full overflow-y-auto"><Journal campaignId={session.campaignId} role={me.role} meId={me.id} members={members} entries={entries} onUpsert={upsertJournal} onRemove={removeJournal} openId={openId} onOpen={(id) => useTable.setState({ openJournalId: id })} /></div>;
 }
 
 /** GM-only picker linking a token to a campaign character. */

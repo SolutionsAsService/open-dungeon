@@ -2,15 +2,21 @@ import { useEffect, useState } from 'react';
 import { api } from '../api';
 import { navigate, Link } from '../router';
 import { CharacterList } from '../characters/CharacterList';
+import { Journal, useJournalLoader } from '../journal/Journal';
+import type { JournalView } from '../../../shared/journal';
+import type { Me } from '../App';
 
 interface Camp { id: string; name: string; description: string; role: string; rulesetId: string; members: { userId: string; displayName: string; role: string }[]; sessions: { id: string; name: string; status: string; updatedAt: string }[] }
 
-export function CampaignPage({ id }: { id: string }) {
+export function CampaignPage({ id, me }: { id: string; me: Me }) {
   const [c, setC] = useState<Camp | null>(null);
   const [err, setErr] = useState('');
   const [sessionName, setSessionName] = useState('');
   const [invite, setInvite] = useState('');
   const [inviteRole, setInviteRole] = useState('player');
+  const [journal, setJournal] = useState<JournalView[] | null>(null);
+  const [openEntry, setOpenEntry] = useState<string | null>(null);
+  useJournalLoader(id, setJournal);
   const load = () => api<Camp>('GET', '/api/campaigns/' + id).then(setC).catch((e) => setErr(e.message));
   useEffect(() => { load(); }, [id]);
   if (err) return <div className="card text-danger" role="alert">{err} <Link to="/" className="btn ml-2">Back</Link></div>;
@@ -44,6 +50,9 @@ export function CampaignPage({ id }: { id: string }) {
         )}
         <h2 className="section-title mt-6 mb-2">Characters</h2>
         <div className="card p-0"><CharacterList campaignId={c.id} role={c.role} members={c.members} /></div>
+        <h2 className="section-title mt-6 mb-2">Journal & handouts</h2>
+        <div className="card p-0">{me && <Journal campaignId={c.id} role={c.role} meId={me.id} members={c.members} entries={journal} openId={openEntry} onOpen={setOpenEntry}
+          onUpsert={(e) => setJournal((j) => [e, ...(j ?? []).filter((x) => x.id !== e.id)])} onRemove={(rid) => setJournal((j) => (j ?? []).filter((x) => x.id !== rid))} />}</div>
       </section>
       <aside className="grid content-start gap-4">
         <div className="card">

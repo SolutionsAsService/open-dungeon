@@ -8,10 +8,12 @@ import { ClientMessage, type ServerMessage, type ServerEvent } from '../shared/p
 import { isGmRole, type Role } from '../shared/permissions';
 import { Services, CommandError, type Effect, type Audience } from './services';
 import { HttpError } from './errors';
+import { canReadEntry } from '../shared/journal';
+import type { JournalChange } from './journal';
 
 interface Conn { ws: WebSocket; userId: string; role: Role; known: Set<string>; cids: Map<string, Promise<ServerMessage>>; bucket: number; last: number }
 /** cids are remembered per user per room (not per socket) so a command resent after a reconnect is still recognised. */
-interface Room { conns: Set<Conn>; queue: Promise<unknown>; cids: Map<string, Map<string, Promise<ServerMessage>>> }
+interface Room { conns: Set<Conn>; queue: Promise<unknown>; cids: Map<string, Map<string, Promise<ServerMessage>>>; campaignId?: string }
 
 const RATE = 20, BURST = 60; // commands per second, burst size
 const CID_MEMORY = 256;
@@ -31,6 +33,7 @@ export class Hub {
     const room = this.room(sessionId);
     const online = this.online(sessionId); online.add(userId);
     const snapshot = await this.svc.snapshot(userId, sessionId, online);
+    room.campaignId = snapshot.session.campaignId;
     if (!room.cids.has(userId)) room.cids.set(userId, new Map());
     const conn: Conn = { ws, userId, role: snapshot.me.role as Role, known: new Set(snapshot.tokens.map((t) => t.id)), cids: room.cids.get(userId)!, bucket: BURST, last: Date.now() };
     room.conns.add(conn);
@@ -96,6 +99,20 @@ export class Hub {
       } else if (eff.kind === 'initiative') {
         const full = await this.svc.initiativeFull(sessionId);
         for (const c of room.conns) send(c.ws, { type: 'event', seq, event: { type: 'initiative.updated', initiative: this.svc.filterInitiative(full, c.role) } });
+      }
+    }
+  }
+
+  /**
+   * Fan a journal change out to every open table of the campaign. Each socket gets the new entry only if
+   * it may read it; sockets that could read the old version but not the new one are told to drop it.
+   */
+  journalChanged(ch: JournalChange) {
+    for (const room of this.rooms.values()) {
+      if (room.campaignId !== ch.campaignId) continue;
+      for (const c of room.conns) {
+        if (ch.after && canReadEntry(c.role, c.userId, ch.after)) send(c.ws, { type: 'event', seq: 0, event: { type: 'journal.upsert', entry: ch.after } });
+        else if (ch.before && canReadEntry(c.role, c.userId, ch.before)) send(c.ws, { type: 'event', seq: 0, event: { type: 'journal.remove', id: ch.before.id } });
       }
     }
   }

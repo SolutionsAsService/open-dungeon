@@ -14,6 +14,7 @@ import { isPointRevealed, type FogRegion } from '../shared/fog';
 import { rollDice, DiceError } from '../shared/dice';
 import { getRuleset } from '../shared/rules/registry';
 import { CharacterService } from './characters';
+import { JournalService } from './journal';
 import type { Command, TokenView, MapView, FogRegionView, DrawingView, ChatView, InitiativeView, SessionSnapshot, ServerEvent, Visibility } from '../shared/protocol';
 
 export type Audience = { kind: 'all' } | { kind: 'gm' } | { kind: 'users'; ids: string[] } | { kind: 'gmAndUsers'; ids: string[] };
@@ -51,7 +52,8 @@ export function canSee(role: Role | null, userId: string, visibility: Visibility
 
 export class Services {
   characters: CharacterService;
-  constructor(public db: Db, public storage: Storage, public opts: { maxUploadBytes: number }) { this.characters = new CharacterService(this); }
+  journal: JournalService;
+  constructor(public db: Db, public storage: Storage, public opts: { maxUploadBytes: number }) { this.characters = new CharacterService(this); this.journal = new JournalService(this); }
 
   // ---------- identity ----------
   /** Development sign-in: creates a user for a display name and returns an opaque session token. */
