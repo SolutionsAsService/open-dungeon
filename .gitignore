@@ -5,3 +5,4 @@ test-results/
 playwright-report/
 .env
 *.log
+.data-e2e/

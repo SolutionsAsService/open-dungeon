@@ -38,7 +38,7 @@ export function SessionPage({ sessionId }: { sessionId: string; me: Me }) {
         <Toolbar engine={engine} />
         <div className="relative min-w-0 flex-1">
           <div ref={host} className="absolute inset-0" data-testid="table-canvas" />
-          <ToolOptions />
+          <ToolOptions socket={socket} />
           {!loaded && <div className="absolute inset-0 grid place-items-center bg-table/80 text-ink-dim">Joining the table…</div>}
           {loaded && gm && <EmptyMapHint onSetup={() => setSetup(true)} />}
           <DiceBar socket={socket} />

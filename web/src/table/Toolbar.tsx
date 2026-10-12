@@ -1,6 +1,7 @@
 import { useEffect } from 'react';
 import { useTable, isGm, type Tool } from './store';
 import type { TableEngine } from './engine';
+import type { TableSocket } from './socket';
 import { getRuleset } from '../../../shared/rules/registry';
 
 const TOOLS: { id: Tool; label: string; key: string; icon: string; gm?: boolean }[] = [
@@ -43,7 +44,7 @@ export function Toolbar({ engine }: { engine: TableEngine | null }) {
 }
 
 /** Contextual options for the active tool, floating over the top-left of the map. */
-export function ToolOptions() {
+export function ToolOptions({ socket }: { socket: TableSocket }) {
   const s = useTable();
   const gm = isGm(s);
   const rs = getRuleset(s.session?.rulesetId ?? 'generic');
@@ -59,6 +60,10 @@ export function ToolOptions() {
     <div role="radiogroup" className="flex gap-1">
       {(['reveal', 'hide'] as const).map((m) => <button key={m} role="radio" aria-checked={s.fogMode === m} className={'btn ' + (s.fogMode === m ? 'btn-primary' : '')} onClick={() => useTable.setState({ fogMode: m })}>{m}</button>)}
     </div>
+    {s.map?.fogEnabled
+      ? <button className="btn" onClick={() => confirm('Remove all fog? Players will see the whole map.') && socket.send({ type: 'fog.reset', enabled: false })}>Remove fog</button>
+      : <button className="btn btn-primary" onClick={() => socket.send({ type: 'fog.reset', enabled: true })}>Cover map in fog</button>}
+    {s.map?.fogEnabled && <button className="btn" onClick={() => confirm('Re-cover the whole map?') && socket.send({ type: 'fog.reset', enabled: true })}>Hide everything</button>}
   </>);
   else if (s.tool === 'token' && gm) body = (<>
     <span className="text-ink-dim">Click to place</span>

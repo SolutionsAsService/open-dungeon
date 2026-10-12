@@ -75,7 +75,7 @@ export class TableEngine {
     c.addEventListener('contextmenu', (e) => { e.preventDefault(); this.ruler = []; this.dirty.measure = true; });
     c.addEventListener('keydown', this.onKey);
     this.app.ticker.add(() => this.frame());
-    (window as any).__odTable = { worldToScreen: (p: Point) => this.worldToScreen(p), camera: () => ({ ...this.cam }), engine: this };
+    (window as any).__odTable = { worldToScreen: (p: Point) => this.worldToScreen(p), camera: () => ({ ...this.cam }), state: () => useTable.getState(), engine: this };
   }
 
   destroy() {
