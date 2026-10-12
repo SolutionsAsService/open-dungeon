@@ -20,7 +20,7 @@ Vite + React 19 + TS + Tailwind v4 client (web/src), PixiJS v8 table engine (web
 - Test hooks: window.__odTable.worldToScreen(p); data-testid: table-canvas, session-name, conn-status, session-status, inspector, chat-log, roll-total, initiative-list, invite-link; toolbar buttons have data-tool.
 
 ## Next
-- [ ] Playwright E2E (playwright.config.ts, tests/e2e/mvp.spec.ts): two browser contexts run the spec's 15-step MVP flow. Local browsers: ~/.cache/ms-playwright (chromium-1248); may need LD_LIBRARY_PATH=$HOME/.cache/pwlibs/root/usr/lib/x86_64-linux-gnu
-- [ ] GitHub Actions CI (typecheck, unit+integration, build, e2e)
+- [x] Playwright E2E (playwright.config.ts, tests/e2e/mvp.spec.ts): two browser contexts run the spec's 15-step MVP flow. Local browsers: ~/.cache/ms-playwright (chromium-1248); may need LD_LIBRARY_PATH=$HOME/.cache/pwlibs/root/usr/lib/x86_64-linux-gnu
+- [x] GitHub Actions CI (typecheck, unit+integration, build, e2e) — green on main (run 38318542531, 2026-10-12)
 - [ ] Docs: architecture/{repository-assessment, system-overview, data-model, realtime-protocol, ruleset-system, security}.md, decisions/ ADRs, implementation/roadmap.md, development/{local-setup, testing, deployment}.md, user/getting-started.md, README
 - [ ] Then: characters + sheets (rulesets' sheet sections), journals/handouts, polygon/brush fog, area templates, multi-select/undo, campaign export/import, asset library page, S3 storage adapter, real auth provider, fog-masked background for players (known limitation: players' client downloads the full background image)
