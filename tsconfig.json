@@ -19,13 +19,7 @@
     "types": [
       "node",
       "vite/client"
-    ],
-    "baseUrl": ".",
-    "paths": {
-      "@shared/*": [
-        "shared/*"
-      ]
-    }
+    ]
   },
   "include": [
     "shared",
