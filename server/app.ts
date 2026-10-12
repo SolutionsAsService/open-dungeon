@@ -39,7 +39,7 @@ export function createApp(svc: Services, opts: { staticDir?: string | null; secu
     return r.data;
   };
 
-  // ---- auth (development strategy; see docs/architecture/decisions/0003-dev-auth.md) ----
+  // ---- auth (development strategy; see docs/decisions/0003-dev-auth.md) ----
   route('POST', '/api/auth/dev', async (c) => {
     const { displayName } = await body(c, z.object({ displayName: z.string().trim().min(1).max(40) }));
     const { user, token } = await svc.devSignIn(displayName);
