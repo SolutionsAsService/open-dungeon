@@ -4,6 +4,21 @@ OPEN TABLETOP is one long-running Node process. It needs a host that keeps WebSo
 (a VM, container platform, Fly/Render/Railway-style service, or your own machine). Serverless functions
 (e.g. Vercel functions) cannot host the `/ws` endpoint.
 
+## Static hosting (Vercel, GitHub Pages): local mode
+
+A static host serves only `dist/`, so `/api` and `/ws` don't exist there — this used to make sign-in fail
+with a 404. The client now detects that (`/api/me` doesn't answer with JSON within 5 s) and switches to
+**local mode** (`web/src/local/`): the same server code (`server/routes.ts`, services, realtime hub) runs inside
+the browser tab on PGlite persisted to IndexedDB. Sign-in, campaigns, characters, journals, maps and the live
+table work; data stays on that device and invites can't reach other devices. A notice on the title page says
+so. `vercel.json` adds SPA rewrites so deep links (`/campaigns/…`, `/invite/…`) load. Force it at build time
+with `VITE_LOCAL_MODE=1`. Tested by `npm run test:e2e:local`.
+
+## Multiplayer server (Docker, Shadw, DevHub)
+
+`Dockerfile` builds the client and runs the server (`/data` volume for PGlite + uploads, or set
+`DATABASE_URL`). `shadw.yml` / `devhub.yml` deploy the same long-running service on Shadw or Autheo DevHub.
+
 ## Build and run
 ```bash
 npm ci

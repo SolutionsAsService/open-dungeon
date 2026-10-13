@@ -8,7 +8,7 @@
 import { Application, Container, Graphics, Sprite, Text, Texture } from 'pixi.js';
 import { useTable, isGm, type TableState } from './store';
 import type { TableSocket } from './socket';
-import { assetUrl } from '../api';
+import { assetSrc } from '../api';
 import { GridConfig, worldToCell, cellCenter, hexCorners, snapPoint, measurePath, type Point } from '../../../shared/grid';
 import { canEditToken, type Role } from '../../../shared/permissions';
 import type { TokenView, DrawingShape } from '../../../shared/protocol';
@@ -131,7 +131,7 @@ export class TableEngine {
         const img = new Image();
         img.onload = () => resolve(Texture.from(img));
         img.onerror = reject;
-        img.src = assetUrl(assetId);
+        assetSrc(assetId).then((src) => { img.src = src; }, reject);
       });
       this.textures.set(assetId, t);
     }

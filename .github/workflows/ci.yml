@@ -21,6 +21,8 @@ jobs:
       - run: npx vite build
       - run: npx playwright install --with-deps chromium
       - run: npx playwright test
+      - name: Static-host (local mode) end-to-end
+        run: npm run test:e2e:local
       - uses: actions/upload-artifact@v4
         if: failure()
         with:

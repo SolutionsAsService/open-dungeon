@@ -1,0 +1,14 @@
+# shadw.yml v1 — Shadw deployment (same shape as devhub.yml).
+# Runs the full multiplayer server (HTTP + WebSocket) with `npm start` on $PORT after `vite build`.
+# Static hosts (Vercel/GitHub Pages) also work, in single-browser local mode.
+version: 1
+project: open-dungeon
+root_dir: .
+target: auto
+build:
+  cache: true
+env:
+  NODE_ENV: production
+deploy:
+  wait: true
+  timeout_minutes: 15

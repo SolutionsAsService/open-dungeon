@@ -4,12 +4,14 @@
  */
 import type { Command, ServerMessage, TokenView } from '../../../shared/protocol';
 import { useTable, applySnapshot, applyEvent, toast } from './store';
+import { localModeSync } from '../local/mode';
+import { LocalWebSocket } from '../local/backend';
 
 type Ack = Extract<ServerMessage, { type: 'ack' }>;
 interface Pending { msg: string; resolve: (a: Ack) => void; cmd: Command }
 
 export class TableSocket {
-  private ws: WebSocket | null = null;
+  private ws: WebSocket | LocalWebSocket | null = null;
   private outbox = new Map<string, Pending>();
   private attempt = 0;
   private closed = false;
@@ -22,11 +24,13 @@ export class TableSocket {
   connect() {
     this.closed = false;
     const proto = location.protocol === 'https:' ? 'wss:' : 'ws:';
-    const ws = new WebSocket(proto + '//' + location.host + '/ws?session=' + encodeURIComponent(this.sessionId));
+    const ws: WebSocket | LocalWebSocket = localModeSync()
+      ? new LocalWebSocket(this.sessionId)
+      : new WebSocket(proto + '//' + location.host + '/ws?session=' + encodeURIComponent(this.sessionId));
     this.ws = ws;
     useTable.setState({ conn: this.attempt === 0 ? 'connecting' : 'reconnecting' });
-    ws.onmessage = (ev) => this.onMessage(JSON.parse(ev.data));
-    ws.onclose = (ev) => {
+    ws.onmessage = (ev: { data: string }) => this.onMessage(JSON.parse(ev.data));
+    ws.onclose = (ev: { code: number }) => {
       if (this.ws !== ws) return;
       this.ws = null;
       if (this.closed) return;
@@ -70,7 +74,7 @@ export class TableSocket {
     return new Promise<Ack>((resolve) => {
       this.outbox.set(cid, { msg, resolve, cmd });
       this.sync();
-      if (this.ws?.readyState === WebSocket.OPEN) this.ws.send(msg);
+      if (this.ws?.readyState === 1) this.ws.send(msg);
     }).then((a) => {
       if (!a.ok && a.code !== 'stale') toast(a.error);
       return a;

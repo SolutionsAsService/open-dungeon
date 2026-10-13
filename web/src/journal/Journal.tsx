@@ -4,7 +4,7 @@
  * Who can read/edit/share is decided by the server; the same rules (shared/journal.ts) only hide controls here.
  */
 import { useEffect, useRef, useState } from 'react';
-import { api, ApiError, uploadImage, assetUrl } from '../api';
+import { api, ApiError, uploadImage, assetSrc } from '../api';
 import { canEditEntry, canUseVisibility, JOURNAL_LIMITS, type JournalKind, type JournalView, type JournalVisibility } from '../../../shared/journal';
 import type { Role } from '../../../shared/permissions';
 
@@ -105,7 +105,7 @@ function JournalEntry({ entry, role, meId, members, campaignId, onUpsert, onRemo
         {editable ? <select className="input w-auto py-0.5 text-xs" aria-label="Entry kind" value={entry.kind} onChange={(e) => save({ kind: e.target.value })}>{KINDS.map((k) => <option key={k} value={k}>{KIND_LABEL[k]}</option>)}</select> : <span>{KIND_LABEL[entry.kind]}{entry.authorName ? ' · by ' + entry.authorName : ''}</span>}
         <span role="status" aria-live="polite">{status}</span>
       </div>
-      {entry.imageAssetId && <img src={assetUrl(entry.imageAssetId)} alt={entry.title} className="max-h-64 w-full rounded-md object-contain" />}
+      {entry.imageAssetId && <AssetImg id={entry.imageAssetId} alt={entry.title} className="max-h-64 w-full rounded-md object-contain" />}
       {editable ? <textarea className="input h-48" aria-label="Entry text" value={body} maxLength={JOURNAL_LIMITS.body} onChange={(e) => setBody(e.target.value)} onBlur={() => body !== entry.body && save({ body })} placeholder="Write here…" />
         : <p className="whitespace-pre-wrap break-words" data-testid="journal-body">{entry.body || <span className="text-ink-dim">(no text)</span>}</p>}
       {editable && canShare && (
@@ -140,4 +140,10 @@ function JournalEntry({ entry, role, meId, members, campaignId, onUpsert, onRemo
       }}>Delete entry</button>}
     </article>
   );
+}
+
+function AssetImg({ id, alt, className }: { id: string; alt: string; className?: string }) {
+  const [src, setSrc] = useState<string | null>(null);
+  useEffect(() => { let live = true; assetSrc(id).then((s) => live && setSrc(s), () => undefined); return () => { live = false; }; }, [id]);
+  return src ? <img src={src} alt={alt} className={className} /> : null;
 }

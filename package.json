@@ -16,10 +16,12 @@
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "test": "vitest run",
     "test:e2e": "playwright test",
-    "db:migrate": "tsx server/db/migrate-cli.ts"
+    "db:migrate": "tsx server/db/migrate-cli.ts",
+    "test:e2e:local": "playwright test -c playwright.local.config.ts"
   },
   "dependencies": {
     "@electric-sql/pglite": "^0.5.9",
+    "buffer": "^6.0.3",
     "pg": "^8.23.1",
     "pixi.js": "^8.22.0",
     "react": "^19.3.0",
