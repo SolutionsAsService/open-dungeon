@@ -26,3 +26,10 @@ docs/implementation/checklist.md.
 8. Real login (OIDC) alongside dev auth
 
 Later: asset library page, walls/lighting/vision, fog-masked background delivery, ruleset editor, voice/video.
+
+## Proposed: miniatures and terrain
+Printable miniatures and 1 in terrain tiles as VTT assets, a library manifest import, and a tile layer for building
+maps from terrain pieces: [docs/integration/miniatures-and-terrain.md](../integration/miniatures-and-terrain.md)
+(ADR [0009](../decisions/0009-miniature-library-and-tile-layer.md), proposed). Phases: M0 docs + token render proof
+(`tools/miniatures/render-token.ts`), M1 package assets, L1/L2 library import, T1–T5 terrain tooling, tile layer,
+imports and fog filtering.
