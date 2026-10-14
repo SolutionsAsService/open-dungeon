@@ -1,6 +1,6 @@
 /** Side-panel list of library miniatures. GMs drag one onto the 2D or 3D table (or press Place) to create a token. */
 import { useState } from 'react';
-import { LIBRARY, MINI_MIME } from './library';
+import { useMinis, MINI_MIME } from './library';
 import { useTable, isGm } from '../table/store';
 import type { TableSocket } from '../table/socket';
 import { placeMini, type MiniItem } from '../../../shared/minis';
@@ -9,7 +9,7 @@ export function MiniLibraryPanel({ socket }: { socket: TableSocket }) {
   const gm = useTable(isGm);
   const map = useTable((s) => s.map);
   const [q, setQ] = useState('');
-  const items = LIBRARY.items.filter((i) => (i.name + ' ' + i.family).toLowerCase().includes(q.toLowerCase()));
+  const items = useMinis((s) => s.items).filter((i) => (i.name + ' ' + i.family).toLowerCase().includes(q.toLowerCase()));
   const place = (i: MiniItem) => map && socket.send(placeMini(i, { x: map.width / 2, y: map.height / 2 }, map.grid));
   const group = (kind: MiniItem['kind'], title: string) => {
     const list = items.filter((i) => i.kind === kind);

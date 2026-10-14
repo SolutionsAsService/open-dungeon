@@ -9,6 +9,10 @@ build:
   cache: true
 env:
   NODE_ENV: production
+  # Private miniatures, read by the server and served to campaign members only (docs/development/deployment.md).
+  # Set MINI_LIBRARY_TOKEN (a fine-grained GitHub token with read access to the viewer repo) as a secret in the
+  # Shadw project settings; never put it in this file. Without a token the library is skipped and the sample pieces show.
+  MINI_LIBRARY_SOURCES: github:SolutionsAsService/miniature-viewer@main
 deploy:
   wait: true
   timeout_minutes: 15

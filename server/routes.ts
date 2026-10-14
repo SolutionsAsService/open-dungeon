@@ -128,6 +128,9 @@ export function createApi(svc: Services, hub: Hub, opts: { secureCookies?: boole
     return ch.after;
   });
   route('DELETE', '/api/journal/:id', async (c) => { hub.journalChanged(await svc.journal.remove((await me(c)).id, c.params.id)); return { ok: true }; });
+  // ---- miniatures (private library sources; members only) ----
+  route('GET', '/api/campaigns/:id/minis', async (c) => svc.minis.list((await me(c)).id, c.params.id));
+  route('GET', '/api/campaigns/:id/minis/:mini/mesh', async (c) => ({ __binary: new Uint8Array(await svc.minis.mesh((await me(c)).id, c.params.id, c.params.mini)), mime: 'application/json' }));
   route('GET', '/api/invites/:token', async (c) => svc.previewInvite(c.params.token));
   route('POST', '/api/invites/:token/accept', async (c) => svc.acceptInvite((await me(c)).id, c.params.token));
 

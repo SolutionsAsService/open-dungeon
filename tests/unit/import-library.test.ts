@@ -8,7 +8,7 @@ import { MiniLibrary } from '../../shared/minis';
 const box = (s: number, h: number) => ({ vertices: [[-s, -s, 0], [s, -s, 0], [s, s, 0], [-s, s, 0], [0, 0, h]], triangles: [[0, 1, 4], [1, 2, 4], [2, 3, 4], [3, 0, 4]] });
 
 describe('miniature library import', () => {
-  it('copies only mesh fields and writes a valid index from a viewer catalogue', () => {
+  it('copies only mesh fields and writes a valid index from a viewer catalogue', async () => {
     const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'od-lib-'));
     fs.mkdirSync(path.join(dir, 'data'));
     fs.mkdirSync(path.join(dir, 'm'));
@@ -17,7 +17,7 @@ describe('miniature library import', () => {
       { id: 'knight', name: 'Knight', family: 'Heroes', line: 'fantasy', model: { format: 'parts', url: './m/a.parts.json' } },
       { id: 'cottage', name: 'Cottage', family: 'Buildings', model: { format: 'stl', url: './m/c.stl' } },
     ] }));
-    const lib = importLibrary(dir, path.join(dir, 'out'), path.join(dir, 'out', 'library.json'));
+    const lib = await importLibrary(dir, path.join(dir, 'out'), path.join(dir, 'out', 'library.json'));
     expect(lib.items).toHaveLength(1); // non-parts models are skipped
     expect(lib.items[0]).toMatchObject({ id: 'knight', kind: 'figure', cells: 1, heightMm: 40, source: { repo: 'Org/fantasy', path: 'knight' } });
     const mesh = JSON.parse(fs.readFileSync(path.join(dir, 'out', 'knight.parts.json'), 'utf8'));

@@ -12,7 +12,7 @@ import { Link } from '../router';
 import { api } from '../api';
 import type { JournalView } from '../../../shared/journal';
 import type { Table3D } from './scene3d';
-import { miniById, MINI_MIME } from '../minis/library';
+import { miniById, MINI_MIME, loadCampaignMinis } from '../minis/library';
 import { placeMini } from '../../../shared/minis';
 
 type View = '2d' | '3d';
@@ -54,6 +54,7 @@ export function SessionPage({ sessionId }: { sessionId: string; me: Me }) {
   useEffect(() => {
     if (!campaignId) return;
     api<{ entries: JournalView[] }>('GET', '/api/campaigns/' + campaignId + '/journal').then((r) => useTable.setState({ journal: r.entries })).catch(() => undefined);
+    loadCampaignMinis(campaignId).catch(() => undefined);
   }, [campaignId]);
   useEffect(() => { if (!toastMsg) return; const t = setTimeout(() => useTable.setState({ toast: null }), 4000); return () => clearTimeout(t); }, [toastMsg]);
 

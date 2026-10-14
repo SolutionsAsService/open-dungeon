@@ -1,9 +1,18 @@
+# syntax=docker/dockerfile:1
 # Open Tabletop server (multiplayer): Node HTTP + WebSocket, PGlite in /data (or DATABASE_URL for Postgres).
+# Private miniatures (docs/development/deployment.md#private-miniatures):
+#   runtime (preferred): docker run -e MINI_LIBRARY_SOURCES=github:Owner/miniature-viewer@main -e MINI_LIBRARY_TOKEN=… image
+#   build time (bundled into dist/, visible to anyone who can load the site):
+#     docker build --build-arg MINI_LIBRARY=github:Owner/miniature-viewer@main --secret id=mini_library_token,env=GH_TOKEN .
 FROM node:22-slim AS build
 WORKDIR /app
 COPY package.json package-lock.json ./
 RUN npm ci
 COPY . .
+ARG MINI_LIBRARY=""
+# the token is a BuildKit secret: mounted for this step only, never stored in a layer or the image
+RUN --mount=type=secret,id=mini_library_token \
+    if [ -n "$MINI_LIBRARY" ]; then MINI_LIBRARY_TOKEN="$(cat /run/secrets/mini_library_token 2>/dev/null)" npx tsx tools/miniatures/import-library.ts "$MINI_LIBRARY"; fi
 RUN npx vite build
 
 FROM node:22-slim

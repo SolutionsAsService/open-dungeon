@@ -9,7 +9,7 @@ import { uploadImage, api } from '../api';
 import { CharacterList } from '../characters/CharacterList';
 import type { CharacterView } from '../../../shared/characters';
 import { MiniLibraryPanel } from '../minis/MiniLibraryPanel';
-import { LIBRARY } from '../minis/library';
+import { useMinis } from '../minis/library';
 
 type Tab = 'chat' | 'turns' | 'party' | 'sheets' | 'journal' | 'minis';
 
@@ -78,6 +78,7 @@ function Inspector({ token, socket, engine }: { token: TokenView; socket: TableS
   const canEdit = gm || (token.ownerIds.includes(s.me!.id) && !token.locked);
   const rs = getRuleset(s.session?.rulesetId ?? 'generic');
   const players = s.members.filter((m) => m.role === 'player');
+  const miniItems = useMinis((m) => m.items);
   const [name, setName] = useState(token.name);
   useEffect(() => setName(token.name), [token.name]);
   const patch = (p: Record<string, unknown>) => socket.send({ type: 'token.update', id: token.id, baseVersion: token.version, patch: p as any });
@@ -118,7 +119,7 @@ function Inspector({ token, socket, engine }: { token: TokenView; socket: TableS
         <label><span className="label">3D miniature</span>
           <select className="input" value={token.miniId ?? ''} onChange={(e) => patch({ miniId: e.target.value || null })} aria-label="3D miniature">
             <option value="">Plain pawn</option>
-            {LIBRARY.items.map((i) => <option key={i.id} value={i.id}>{i.name}</option>)}
+            {miniItems.map((i) => <option key={i.id} value={i.id}>{i.name}</option>)}
           </select></label>
         <label><span className="label">Controlled by</span>
           <select className="input" multiple size={Math.min(4, Math.max(2, players.length))} value={token.ownerIds} onChange={(e) => patch({ ownerIds: [...e.target.selectedOptions].map((o) => o.value) })} aria-label="Players who control this token">
