@@ -5,6 +5,7 @@
  */
 import { z } from 'zod';
 import { snapPoint, type GridConfig, type Point } from './grid';
+import type { DrawingShape } from './protocol';
 
 export const MM_PER_CELL = 25.4;
 
@@ -58,6 +59,29 @@ export const MiniLibrary = z.object({
   items: z.array(MiniItem).max(2000),
 });
 export type MiniLibrary = z.infer<typeof MiniLibrary>;
+
+export interface WallSeg { x1: number; y1: number; x2: number; y2: number; width: number }
+/**
+ * Wall segments (map px) for the 3D view from table drawings: lines (arrows are annotations, skipped), the four sides
+ * of rectangles, and freehand paths thinned to steps of at least half a cell. Circles and text are not walls.
+ * shortcut: there is no wall layer yet (roadmap walls/vision); switch to it when it exists.
+ */
+export function wallSegments(drawings: { shape: DrawingShape }[], cellSize: number, max = 3000): WallSeg[] {
+  const out: WallSeg[] = [];
+  const seg = (a: Point, b: Point, width: number) => { if (out.length < max && Math.hypot(b.x - a.x, b.y - a.y) > 1) out.push({ x1: a.x, y1: a.y, x2: b.x, y2: b.y, width }); };
+  for (const { shape: s } of drawings) {
+    if (s.kind === 'line' && !s.arrow) seg(s.from, s.to, s.width);
+    else if (s.kind === 'rect') {
+      const x0 = Math.min(s.x, s.x + s.w), y0 = Math.min(s.y, s.y + s.h), x1 = Math.max(s.x, s.x + s.w), y1 = Math.max(s.y, s.y + s.h);
+      const c = [{ x: x0, y: y0 }, { x: x1, y: y0 }, { x: x1, y: y1 }, { x: x0, y: y1 }];
+      c.forEach((p, i) => seg(p, c[(i + 1) % 4], s.width));
+    } else if (s.kind === 'path') {
+      let last = s.points[0];
+      s.points.forEach((p, i) => { if (Math.hypot(p.x - last.x, p.y - last.y) >= cellSize / 2 || (i === s.points.length - 1 && p !== last)) { seg(last, p, s.width); last = p; } });
+    }
+  }
+  return out;
+}
 
 /** token.create for dropping a library item at a map point: snapped by footprint, scenery placed locked. */
 export function placeMini(item: MiniItem, p: Point, grid: GridConfig) {

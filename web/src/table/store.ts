@@ -38,6 +38,8 @@ export interface TableState {
   /** Journal entries this user may read (null until loaded); kept live by journal.* events. */
   journal: JournalView[] | null;
   openJournalId: string | null;
+  /** 3D view: extrude line/rectangle/path drawings as walls (local preference) */
+  walls3d: boolean;
 }
 
 const emptyInit: InitiativeView = { round: 1, turnIndex: 0, active: false, activeId: null, participants: [] };
@@ -47,6 +49,7 @@ export const useTable = create<TableState>(() => ({
   drawColor: '#e0a95b', drawWidth: 4, drawGmOnly: false, drawTemporary: false, fogMode: 'reveal',
   newToken: { name: 'Token', category: 'npc', color: '#c0392b' }, fatalError: null,
   panelTab: 'chat', openCharacterId: null, journal: null, openJournalId: null,
+  walls3d: typeof localStorage === 'undefined' || localStorage.getItem('od.walls3d') !== '0',
 }));
 
 export function upsertJournal(e: JournalView) {

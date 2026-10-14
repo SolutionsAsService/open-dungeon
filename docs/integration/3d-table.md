@@ -13,6 +13,9 @@ miniatures onto, shared live with the 2D map and other players.
 - **Miniatures:** open the **Minis** tab in the side panel. GMs drag an entry onto the table (2D or 3D) or press
   **Place** (map centre). Figures become normal tokens; scenery (tower, well, treasure) becomes a locked object token.
   The inspector's **3D miniature** picker swaps a token's model or turns it back into a plain pawn.
+- **Walls and rooms:** there is no wall layer yet, so the 3D view stands drawings up as 1.5 in (38 mm) stone walls:
+  lines (not arrows), the four sides of rectangles (rooms) and freehand paths. Circles and text stay flat. Toggle with
+  **Walls** next to the 2D | 3D switch (remembered per browser). Players only get walls in areas revealed from fog.
 
 ## Scale
 World units are millimetres; one grid cell is 25.4 mm (1 in = 5 ft at 28 mm heroic scale). Models are shown at their
@@ -49,5 +52,5 @@ swap, locked scenery, invalid ids). Visual check: headless Chrome with SwiftShad
 docs/development/testing.md).
 
 ## Not yet
-Measuring, drawing and fog painting in 3D (switch to 2D); user-uploaded models; hex-shaped bases; token art in 3D;
+A real wall layer (walls/vision roadmap; also UVTT import) to replace drawings-as-walls; doors. Measuring, drawing and fog painting in 3D (switch to 2D); user-uploaded models; hex-shaped bases; token art in 3D;
 pings are sent but not drawn in 3D.

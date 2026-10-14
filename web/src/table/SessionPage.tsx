@@ -76,6 +76,7 @@ export function SessionPage({ sessionId }: { sessionId: string; me: Me }) {
           <div ref={host} className={'absolute inset-0' + (view === '3d' ? ' invisible' : '')} data-testid="table-canvas" />
           {view === '3d' && <div ref={host3d} className="absolute inset-0" data-testid="table-3d" />}
           <div role="group" aria-label="Table view" className="absolute right-3 top-3 z-10 flex overflow-hidden rounded-lg border border-line bg-panel/95 text-sm shadow-lg">
+            {view === '3d' && <WallsToggle />}
             {(['2d', '3d'] as const).map((v) => <button key={v} className={'px-3 py-1.5 font-semibold ' + (view === v ? 'bg-accent text-black' : 'text-ink-dim hover:text-ink')} aria-pressed={view === v} data-view={v} onClick={() => setView(v)}>{v.toUpperCase()}</button>)}
           </div>
           <ToolOptions socket={socket} />
@@ -89,6 +90,11 @@ export function SessionPage({ sessionId }: { sessionId: string; me: Me }) {
       </div>
     </div>
   );
+}
+
+function WallsToggle() {
+  const on = useTable((s) => s.walls3d);
+  return <button className={'border-r border-line px-3 py-1.5 font-semibold ' + (on ? 'text-ink' : 'text-ink-dim')} aria-pressed={on} title="Show drawn lines, rectangles and paths as walls" onClick={() => { useTable.setState({ walls3d: !on }); localStorage.setItem('od.walls3d', on ? '0' : '1'); }}>Walls</button>;
 }
 
 function EmptyMapHint({ onSetup }: { onSetup: () => void }) {

@@ -13,7 +13,8 @@ import type { TableSocket } from './socket';
 import { assetSrc } from '../api';
 import { GridConfig, worldToCell, cellCenter, hexCorners, snapPoint, type Point } from '../../../shared/grid';
 import { canEditToken, type Role } from '../../../shared/permissions';
-import { mmPerPx, MM_PER_CELL, groundFootprint, type MiniItem, type MeshPart } from '../../../shared/minis';
+import { isPointRevealed } from '../../../shared/fog';
+import { mmPerPx, MM_PER_CELL, groundFootprint, wallSegments, type MiniItem, type MeshPart } from '../../../shared/minis';
 import { miniById, meshUrl } from '../minis/library';
 import type { TokenView } from '../../../shared/protocol';
 
@@ -54,12 +55,13 @@ export class Table3D {
   controls!: OrbitControls;
   private board = new THREE.Group();
   private tokensG = new THREE.Group();
+  private wallsG = new THREE.Group();
   private sun = new THREE.DirectionalLight(0xfff1dc, 2.4);
   private fogMesh: THREE.Mesh | null = null;
   private fogCanvas = document.createElement('canvas');
   private views = new Map<string, TokenObj>();
   private bgAsset: string | null = null;
-  private dirty = { board: true, tokens: true, fog: true };
+  private dirty = { board: true, tokens: true, fog: true, walls: true };
   private needsRender = true;
   private unsub: (() => void) | null = null;
   private ro: ResizeObserver | null = null;
@@ -91,7 +93,7 @@ export class Table3D {
     this.sun.castShadow = true;
     this.sun.shadow.mapSize.set(2048, 2048);
     this.sun.shadow.bias = -0.0005;
-    this.scene.add(this.sun, this.sun.target, this.board, this.tokensG);
+    this.scene.add(this.sun, this.sun.target, this.board, this.wallsG, this.tokensG);
     // our pointerdown runs before OrbitControls' so a token drag can switch the controls off first
     c.addEventListener('pointerdown', this.onDown);
     c.addEventListener('pointermove', this.onMove);
@@ -115,7 +117,7 @@ export class Table3D {
     this.unsub?.(); this.ro?.disconnect();
     this.renderer?.setAnimationLoop(null);
     this.controls?.dispose();
-    this.clearGroup(this.board); this.clearGroup(this.tokensG);
+    this.clearGroup(this.board); this.clearGroup(this.tokensG); this.clearGroup(this.wallsG);
     this.renderer?.dispose();
     this.renderer?.domElement.remove();
     if ((window as any).__odTable3d?.engine === this) delete (window as any).__odTable3d;
@@ -170,11 +172,12 @@ export class Table3D {
   // ---------- state ----------
   private onState(s: TableState, p: TableState) {
     if (s.map !== p.map) {
-      this.dirty.board = this.dirty.tokens = this.dirty.fog = true;
+      this.dirty.board = this.dirty.tokens = this.dirty.fog = this.dirty.walls = true;
       if (s.map && !this.fitted) { this.fitted = true; this.fit(); }
     }
     if (s.tokens !== p.tokens || s.selectedId !== p.selectedId) this.dirty.tokens = true;
-    if (s.fog !== p.fog || s.me !== p.me) this.dirty.fog = true;
+    if (s.fog !== p.fog || s.me !== p.me) this.dirty.fog = this.dirty.walls = true;
+    if (s.drawings !== p.drawings || s.walls3d !== p.walls3d) this.dirty.walls = true;
   }
 
   private frame() {
@@ -182,6 +185,7 @@ export class Table3D {
     if (this.dirty.board) { this.dirty.board = false; this.buildBoard(s); this.needsRender = true; }
     if (this.dirty.tokens) { this.dirty.tokens = false; this.syncTokens(s); this.needsRender = true; }
     if (this.dirty.fog) { this.dirty.fog = false; this.drawFog(s); this.needsRender = true; }
+    if (this.dirty.walls) { this.dirty.walls = false; this.buildWalls(s); this.needsRender = true; }
     if (!this.needsRender) return;
     this.needsRender = false;
     this.renderer.render(this.scene, this.camera);
@@ -284,6 +288,25 @@ export class Table3D {
     const mat = mesh.material as THREE.MeshBasicMaterial;
     mat.alphaMap!.needsUpdate = true;
     mat.opacity = isGm(s) ? 0.5 : 1; // GMs see through fog, dimmed
+  }
+
+  /** Drawn lines, rectangles and paths stand up as 1.5 in stone walls; players only get walls in revealed areas. */
+  private buildWalls(s: TableState) {
+    this.clearGroup(this.wallsG);
+    const m = s.map; if (!m || !s.walls3d) return;
+    const k = this.k(), H = 38, gm = isGm(s);
+    const segs = wallSegments(s.drawings, m.grid.cellSize).filter((w) => gm || isPointRevealed(m.fogEnabled, s.fog, { x: (w.x1 + w.x2) / 2, y: (w.y1 + w.y2) / 2 }));
+    if (!segs.length) return;
+    const walls = new THREE.InstancedMesh(new THREE.BoxGeometry(1, 1, 1), new THREE.MeshStandardMaterial({ color: 0x8a8174, roughness: 0.9 }), segs.length);
+    const mtx = new THREE.Matrix4(), q = new THREE.Quaternion(), up = new THREE.Vector3(0, 1, 0);
+    segs.forEach((w, i) => {
+      const t = Math.max(3, w.width * k), len = Math.hypot(w.x2 - w.x1, w.y2 - w.y1) * k + t; // + t closes corners
+      q.setFromAxisAngle(up, -Math.atan2(w.y2 - w.y1, w.x2 - w.x1));
+      mtx.compose(new THREE.Vector3(((w.x1 + w.x2) / 2) * k, H / 2, ((w.y1 + w.y2) / 2) * k), q, new THREE.Vector3(len, H, t));
+      walls.setMatrixAt(i, mtx);
+    });
+    walls.castShadow = walls.receiveShadow = true;
+    this.wallsG.add(walls);
   }
 
   // ---------- tokens ----------

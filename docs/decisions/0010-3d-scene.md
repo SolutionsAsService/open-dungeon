@@ -26,6 +26,8 @@ three.js from `viewer/<id>.parts.json` (mm, z up).
   ADR 0009's PNG-asset import for 3D; the PNG path and the tile layer stay valid for 2D and remain proposed.
 - **Scenery = locked object tokens.** Terrain pieces (tower, well, treasure) are tokens with `category: 'object'`,
   `locked: true` and a `miniId`, so they reuse ordering, permissions, fog filtering and deletion.
+- **Walls from drawings (interim).** With no wall layer yet, the 3D view extrudes line, rectangle and path drawings as
+  walls (`wallSegments`), filtered by fog for players. Replaced by the walls/vision layer when it exists.
 - **Footprint from the model.** Base size is the ground-contact box of the mesh; 25/32/40 mm bases snap to one square,
   larger ones to the nearest whole squares, at least 2 x 2 (`cellsForBase`).
 
