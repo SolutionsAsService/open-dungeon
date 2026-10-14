@@ -5,7 +5,7 @@
 import fs from 'node:fs/promises';
 import path from 'node:path';
 
-export interface Storage { put(key: string, data: Buffer): Promise<void>; get(key: string): Promise<Buffer | null> }
+export interface Storage { put(key: string, data: Buffer): Promise<void>; get(key: string): Promise<Buffer | null>; delete(key: string): Promise<void> }
 
 export class LocalDiskStorage implements Storage {
   constructor(private dir: string) {}
@@ -15,12 +15,14 @@ export class LocalDiskStorage implements Storage {
   }
   async put(key: string, data: Buffer) { await fs.mkdir(this.dir, { recursive: true }); await fs.writeFile(this.file(key), data); }
   async get(key: string) { try { return await fs.readFile(this.file(key)); } catch { return null; } }
+  async delete(key: string) { await fs.rm(this.file(key), { force: true }); }
 }
 
 export class MemoryStorage implements Storage {
   private m = new Map<string, Buffer>();
   async put(key: string, data: Buffer) { this.m.set(key, data); }
   async get(key: string) { return this.m.get(key) ?? null; }
+  async delete(key: string) { this.m.delete(key); }
 }
 
 export interface SniffedImage { mime: 'image/png' | 'image/jpeg' | 'image/webp' | 'image/gif'; width: number | null; height: number | null }

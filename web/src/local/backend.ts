@@ -56,6 +56,7 @@ class IdbStorage implements Storage {
   }
   async put(key: string, data: Buffer) { await this.tx('readwrite', (s) => s.put(new Uint8Array(data), key)); }
   async get(key: string) { const v = await this.tx<Uint8Array | undefined>('readonly', (s) => s.get(key)); return v ? Buffer.from(v) : null; }
+  async delete(key: string) { await this.tx('readwrite', (s) => s.delete(key)); }
 }
 
 /** Server-side end of an in-tab socket: the subset of the `ws` API the Hub uses. */

@@ -52,6 +52,19 @@ transactional (`FOR UPDATE`). Invalid, expired, exhausted and revoked invites al
 - Assets are served with `X-Content-Type-Options: nosniff`, `Content-Security-Policy: default-src 'none'` and
   `Cache-Control: private`.
 
+## Miniatures (ADR 0011)
+- **Library sources** (`MINI_LIBRARY_SOURCES`) are read server-side. The GitHub token (`MINI_LIBRARY_TOKEN`/`GITHUB_TOKEN`)
+  is only sent to api.github.com in a header, never logged or returned. Catalogue paths are normalised and cannot leave the
+  catalogue root; HTTPS sources refuse redirects; each file is capped at 64 MB. Only the converted index and stripped meshes
+  (name, colour, vertices, triangles) are served, and only to campaign members (`/api/campaigns/:id/minis…`; 404 otherwise).
+- **Uploaded figures**: type from content (STL/OBJ/glTF), never the file name; `MAX_UPLOAD_BYTES` (20 MB) cap; at most
+  5 M triangles read and 500 k kept (vertex clustering above that); every coordinate must be finite and every index in
+  range; external glTF buffers (`uri` other than `data:`) and required extensions are refused, so the server never fetches
+  a URL from an upload. Only the converted JSON mesh is stored (Storage key `mini_<id>`), never the original file.
+  500 uploads per campaign.
+- Who: GMs always; players only when the campaign's "players may upload" setting is on (owner/GM toggles it); spectators never.
+  Rename/delete: uploader or GM. A player may set `miniId` on a token they control only to a figure they uploaded to that campaign.
+
 ## Dice
 Server-side rolls only, CSPRNG with rejection sampling (`secureDie`), a hand-written parser (never `eval`) with
 limits on length, terms, dice count and sides. Clients cannot submit results.

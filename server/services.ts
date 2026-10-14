@@ -343,7 +343,9 @@ export class Services {
         if (!canEditToken(role, userId, tok)) deny('You can only edit your own tokens');
         const p = cmd.patch;
         const gmOnlyFields: (keyof typeof p)[] = ['hidden', 'locked', 'ownerIds', 'category', 'characterId', 'miniId'];
-        if (!isGmRole(role) && gmOnlyFields.some((k) => p[k] !== undefined)) deny('Only the GM can change visibility, locking, ownership, category, linked character or miniature');
+        // players may put a figure they uploaded to this campaign on a token they control (ADR 0011)
+        const ownMini = !isGmRole(role) && !!p.miniId && !!(await t.query('SELECT 1 FROM uploaded_minis WHERE id = $1 AND campaign_id = $2 AND owner_id = $3', [p.miniId, session.campaign_id, userId]))[0];
+        if (!isGmRole(role) && gmOnlyFields.some((k) => p[k] !== undefined && !(k === 'miniId' && ownMini))) deny('Only the GM can change visibility, locking, ownership, category, linked character or miniature');
         if (cmd.baseVersion !== tok.version) throw new CommandError('stale', 'This token changed before your edit arrived', tok);
         const cols: Record<string, string> = { name: 'name', category: 'category', color: 'color', rotation: 'rotation', size: 'size', hidden: 'hidden', locked: 'locked', ownerIds: 'owner_ids', hp: 'hp', hpMax: 'hp_max', conditions: 'conditions', assetId: 'asset_id', characterId: 'character_id', miniId: 'mini_id' };
         const sets: string[] = []; const vals: unknown[] = [cmd.id];

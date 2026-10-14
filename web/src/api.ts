@@ -20,18 +20,21 @@ export async function api<T = any>(method: string, path: string, body?: unknown)
   return j as T;
 }
 
-export async function uploadImage(campaignId: string, file: File): Promise<{ id: string; width: number | null; height: number | null }> {
+/** POST a file as the raw request body (images, miniature meshes); works in local mode too. */
+export async function uploadFile<T = any>(path: string, file: File): Promise<T> {
+  const headers = { 'x-od-client': '1', 'x-filename': encodeURIComponent(file.name).slice(0, 120) };
   if (await isLocalMode()) {
     const { localFetch } = await import('./local/backend');
-    const out = await localFetch('POST', '/api/campaigns/' + campaignId + '/assets', { 'x-od-client': '1', 'x-filename': encodeURIComponent(file.name).slice(0, 120) }, new Uint8Array(await file.arrayBuffer()));
+    const out = await localFetch('POST', path, headers, new Uint8Array(await file.arrayBuffer()));
     if (out.status >= 400) throw new ApiError(out.status, out.json?.error || 'Upload failed');
     return out.json;
   }
-  const r = await fetch('/api/campaigns/' + campaignId + '/assets', { method: 'POST', credentials: 'same-origin', headers: { 'x-od-client': '1', 'x-filename': encodeURIComponent(file.name).slice(0, 120) }, body: file });
+  const r = await fetch(path, { method: 'POST', credentials: 'same-origin', headers, body: file });
   const j = await r.json().catch(() => ({}));
   if (!r.ok) throw new ApiError(r.status, j.error || 'Upload failed');
   return j;
 }
+export const uploadImage = (campaignId: string, file: File) => uploadFile<{ id: string; width: number | null; height: number | null }>('/api/campaigns/' + campaignId + '/assets', file);
 export const assetUrl = (id: string) => '/api/assets/' + id;
 
 const blobUrls = new Map<string, Promise<string>>();

@@ -9,6 +9,7 @@ import { HttpError, badRequest, unauthorized } from './errors';
 import { Role } from '../shared/permissions';
 import { CharacterCreate, CharacterUpdate } from '../shared/characters';
 import { JournalCreate, JournalUpdate } from '../shared/journal';
+import { UploadOptions } from './minis';
 
 export const COOKIE = 'od_session';
 export const JSON_LIMIT = 64 * 1024;
@@ -131,6 +132,22 @@ export function createApi(svc: Services, hub: Hub, opts: { secureCookies?: boole
   // ---- miniatures (private library sources; members only) ----
   route('GET', '/api/campaigns/:id/minis', async (c) => svc.minis.list((await me(c)).id, c.params.id));
   route('GET', '/api/campaigns/:id/minis/:mini/mesh', async (c) => ({ __binary: new Uint8Array(await svc.minis.mesh((await me(c)).id, c.params.id, c.params.mini)), mime: 'application/json' }));
+  // bring-your-own figures: raw STL/OBJ/GLB/glTF body, options in the query string
+  route('POST', '/api/campaigns/:id/minis', async (c) => {
+    const u = await me(c);
+    const o = UploadOptions.safeParse(Object.fromEntries(c.url.searchParams));
+    if (!o.success) throw badRequest(o.error.issues.map((i) => i.path.join('.') + ': ' + i.message).join('; '));
+    return svc.minis.upload(u.id, c.params.id, Buffer.from(c.raw(svc.opts.maxUploadBytes + 1)), o.data);
+  });
+  route('PATCH', '/api/campaigns/:id/minis/:mini', async (c) => {
+    const u = await me(c);
+    return svc.minis.rename(u.id, c.params.id, c.params.mini, (await body(c, z.object({ name: z.string().trim().min(1).max(60) }))).name);
+  });
+  route('DELETE', '/api/campaigns/:id/minis/:mini', async (c) => svc.minis.remove((await me(c)).id, c.params.id, c.params.mini));
+  route('PATCH', '/api/campaigns/:id/mini-settings', async (c) => {
+    const u = await me(c);
+    return svc.minis.setPlayerUploads(u.id, c.params.id, (await body(c, z.object({ playerUploads: z.boolean() }))).playerUploads);
+  });
   route('GET', '/api/invites/:token', async (c) => svc.previewInvite(c.params.token));
   route('POST', '/api/invites/:token/accept', async (c) => svc.acceptInvite((await me(c)).id, c.params.token));
 
