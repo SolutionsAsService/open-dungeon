@@ -12,4 +12,5 @@ Short records of decisions already made in the code. Add a new numbered file whe
 | [0006](0006-server-authoritative-realtime.md) | Server-authoritative realtime with versions and sequence numbers (no CRDT) |
 | [0007](0007-ruleset-modules.md) | Game systems as validated TypeScript modules |
 | [0008](0008-storage-interface.md) | Object storage behind a small Storage interface |
-| [0009](0009-miniature-library-and-tile-layer.md) | Proposed: miniature library import and a server-authoritative tile layer |
+| [0009](0009-miniature-library-and-tile-layer.md) | Miniature library import and a server-authoritative tile layer (3D part amended by 0010; PNG import and tile layer still proposed) |
+| [0010](0010-3d-scene.md) | 3D table (three.js) over the same tokens; bundled miniature library; scenery as locked object tokens |

@@ -11,6 +11,15 @@ import type { Me } from '../App';
 import { Link } from '../router';
 import { api } from '../api';
 import type { JournalView } from '../../../shared/journal';
+import type { Table3D } from './scene3d';
+
+type View = '2d' | '3d';
+/** 2D/3D choice per scene (map), remembered in this browser. */
+function useView(mapId: string | undefined): [View, (v: View) => void] {
+  const [view, setView] = useState<View>('2d');
+  useEffect(() => { setView(mapId && localStorage.getItem('od.view.' + mapId) === '3d' ? '3d' : '2d'); }, [mapId]);
+  return [view, (v) => { setView(v); if (mapId) localStorage.setItem('od.view.' + mapId, v); }];
+}
 
 export function SessionPage({ sessionId }: { sessionId: string; me: Me }) {
   const host = useRef<HTMLDivElement>(null);
@@ -22,6 +31,15 @@ export function SessionPage({ sessionId }: { sessionId: string; me: Me }) {
   const fatal = useTable((s) => s.fatalError);
   const gm = useTable(isGm);
   const toastMsg = useTable((s) => s.toast);
+  const host3d = useRef<HTMLDivElement>(null);
+  const [view, setView] = useView(useTable((s) => s.map?.id));
+  const [t3d, setT3d] = useState<Table3D | null>(null);
+  useEffect(() => {
+    if (view !== '3d') return;
+    let alive = true, eng: Table3D | null = null;
+    import('./scene3d').then(({ Table3D }) => { if (!alive || !host3d.current) return; eng = new Table3D(socket); eng.init(host3d.current); setT3d(eng); });
+    return () => { alive = false; eng?.destroy(); setT3d(null); };
+  }, [view, socket]);
 
   useEffect(() => {
     useTable.setState({ loaded: false, fatalError: null, tokens: {}, chat: [], selectedId: null, tool: 'select', panelTab: 'chat', openCharacterId: null, journal: null, openJournalId: null });
@@ -42,9 +60,13 @@ export function SessionPage({ sessionId }: { sessionId: string; me: Me }) {
     <div className="flex h-screen flex-col overflow-hidden bg-table">
       <TopBar socket={socket} engine={engine} onSetup={() => setSetup(true)} onTogglePanel={() => setPanel((p) => !p)} panelOpen={panel} />
       <div className="relative flex min-h-0 flex-1">
-        <Toolbar engine={engine} />
+        <Toolbar engine={view === '3d' ? t3d : engine} />
         <div className="relative min-w-0 flex-1">
-          <div ref={host} className="absolute inset-0" data-testid="table-canvas" />
+          <div ref={host} className={'absolute inset-0' + (view === '3d' ? ' invisible' : '')} data-testid="table-canvas" />
+          {view === '3d' && <div ref={host3d} className="absolute inset-0" data-testid="table-3d" />}
+          <div role="group" aria-label="Table view" className="absolute right-3 top-3 z-10 flex overflow-hidden rounded-lg border border-line bg-panel/95 text-sm shadow-lg">
+            {(['2d', '3d'] as const).map((v) => <button key={v} className={'px-3 py-1.5 font-semibold ' + (view === v ? 'bg-accent text-black' : 'text-ink-dim hover:text-ink')} aria-pressed={view === v} data-view={v} onClick={() => setView(v)}>{v.toUpperCase()}</button>)}
+          </div>
           <ToolOptions socket={socket} />
           {!loaded && <div className="absolute inset-0 grid place-items-center bg-table/80 text-ink-dim">Joining the table…</div>}
           {loaded && gm && <EmptyMapHint onSetup={() => setSetup(true)} />}

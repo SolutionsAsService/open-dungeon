@@ -15,7 +15,7 @@ const TOOLS: { id: Tool; label: string; key: string; icon: string; gm?: boolean 
   { id: 'fog', label: 'Fog of war (drag to reveal/hide)', key: 'g', icon: '☁', gm: true },
 ];
 
-export function Toolbar({ engine }: { engine: TableEngine | null }) {
+export function Toolbar({ engine }: { engine: Pick<TableEngine, 'zoomBy' | 'fit'> | null }) {
   const tool = useTable((s) => s.tool);
   const gm = useTable(isGm);
   useEffect(() => {

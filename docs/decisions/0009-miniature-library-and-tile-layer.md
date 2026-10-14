@@ -1,6 +1,8 @@
 # ADR 0009: Miniature library import and a server-authoritative tile layer
 
-Status: proposed (2026-10-13)
+Status: proposed (2026-10-13); amended by [ADR 0010](0010-3d-scene.md) (accepted): the 3D view and the bundled
+miniature library are built; tokens link to minis by `miniId` instead of through an uploaded asset. The PNG import and
+the tile layer below remain proposed.
 
 ## Context
 We design printable miniatures and terrain (SolutionsAsService/fantasy-miniatures, scifi-miniatures, shown in
