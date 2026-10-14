@@ -2,7 +2,7 @@
  * WebSocket client with reconnect, an outbox of unacknowledged commands (resent with the same id after
  * reconnecting, so the server can de-duplicate), and optimistic token moves with rollback.
  */
-import type { Command, ServerMessage, TokenView } from '../../../shared/protocol';
+import type { CommandInput as Command, ServerMessage, TokenView } from '../../../shared/protocol';
 import { useTable, applySnapshot, applyEvent, toast } from './store';
 import { localModeSync } from '../local/mode';
 import { LocalWebSocket } from '../local/backend';

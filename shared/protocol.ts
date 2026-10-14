@@ -7,6 +7,7 @@ import { z } from 'zod';
 import { GridConfig } from './grid';
 import { FogShape } from './fog';
 import type { JournalView } from './journal';
+import { MiniId } from './minis';
 
 const Id = z.string().min(1).max(64);
 const Coord = z.number().finite().min(-100000).max(100000);
@@ -29,6 +30,8 @@ export const TokenPatch = z.object({
   conditions: z.array(z.string().min(1).max(32)).max(20).optional(),
   assetId: Id.nullable().optional(),
   characterId: Id.nullable().optional(),
+  /** 3D model from the miniature library (shared/minis.ts); null = plain pawn */
+  miniId: MiniId.nullable().optional(),
 }).strict();
 export type TokenPatch = z.infer<typeof TokenPatch>;
 
@@ -42,7 +45,7 @@ export const DrawingShape = z.discriminatedUnion('kind', [
 export type DrawingShape = z.infer<typeof DrawingShape>;
 
 export const Command = z.discriminatedUnion('type', [
-  z.object({ type: z.literal('token.create'), name: z.string().max(60).default(''), category: TokenCategory.default('generic'), color: Color.default('#c0392b'), x: Coord, y: Coord, size: z.number().min(0.25).max(10).default(1), hidden: z.boolean().default(false), ownerIds: z.array(Id).max(16).default([]), assetId: Id.nullable().default(null) }),
+  z.object({ type: z.literal('token.create'), name: z.string().max(60).default(''), category: TokenCategory.default('generic'), color: Color.default('#c0392b'), x: Coord, y: Coord, size: z.number().min(0.25).max(10).default(1), hidden: z.boolean().default(false), ownerIds: z.array(Id).max(16).default([]), assetId: Id.nullable().default(null), miniId: MiniId.nullable().default(null), locked: z.boolean().default(false) }),
   z.object({ type: z.literal('token.move'), id: Id, x: Coord, y: Coord, baseVersion: z.number().int().min(1) }),
   z.object({ type: z.literal('token.update'), id: Id, patch: TokenPatch, baseVersion: z.number().int().min(1) }),
   z.object({ type: z.literal('token.delete'), id: Id }),
@@ -62,6 +65,8 @@ export const Command = z.discriminatedUnion('type', [
   z.object({ type: z.literal('ping'), x: Coord, y: Coord }),
 ]);
 export type Command = z.infer<typeof Command>;
+/** What clients send: fields with schema defaults may be omitted. */
+export type CommandInput = z.input<typeof Command>;
 
 export const ClientMessage = z.object({ cid: z.string().min(1).max(64), cmd: Command });
 export type ClientMessage = z.infer<typeof ClientMessage>;
@@ -70,7 +75,7 @@ export type ClientMessage = z.infer<typeof ClientMessage>;
 export interface TokenView {
   id: string; mapId: string; name: string; category: string; assetId: string | null; color: string;
   x: number; y: number; rotation: number; size: number; hidden: boolean; locked: boolean;
-  ownerIds: string[]; hp: number | null; hpMax: number | null; conditions: string[]; characterId: string | null; version: number;
+  ownerIds: string[]; hp: number | null; hpMax: number | null; conditions: string[]; characterId: string | null; miniId: string | null; version: number;
 }
 export interface MapView { id: string; name: string; backgroundAssetId: string | null; width: number; height: number; grid: z.infer<typeof GridConfig>; fogEnabled: boolean; version: number }
 export interface FogRegionView { id: string; mode: 'reveal' | 'hide'; shape: z.infer<typeof FogShape> }

@@ -8,8 +8,10 @@ import { getRuleset } from '../../../shared/rules/registry';
 import { uploadImage, api } from '../api';
 import { CharacterList } from '../characters/CharacterList';
 import type { CharacterView } from '../../../shared/characters';
+import { MiniLibraryPanel } from '../minis/MiniLibraryPanel';
+import { LIBRARY } from '../minis/library';
 
-type Tab = 'chat' | 'turns' | 'party' | 'sheets' | 'journal';
+type Tab = 'chat' | 'turns' | 'party' | 'sheets' | 'journal' | 'minis';
 
 export function SidePanel({ socket, engine }: { socket: TableSocket; engine: TableEngine | null }) {
   const tab = useTable((s) => s.panelTab);
@@ -19,8 +21,8 @@ export function SidePanel({ socket, engine }: { socket: TableSocket; engine: Tab
     <aside className="flex w-80 shrink-0 flex-col border-l border-line bg-panel" aria-label="Side panel">
       {selected && <Inspector key={selected.id} token={selected} socket={socket} engine={engine} />}
       <div role="tablist" className="flex border-b border-line">
-        {(['chat', 'turns', 'party', 'sheets', 'journal'] as Tab[]).map((t) => (
-          <button key={t} role="tab" aria-selected={tab === t} onClick={() => setTab(t)} className={'flex-1 py-2 text-xs font-semibold uppercase tracking-wider ' + (tab === t ? 'border-b-2 border-accent text-ink' : 'text-ink-dim hover:text-ink')}>
+        {(['chat', 'turns', 'party', 'sheets', 'journal', 'minis'] as Tab[]).map((t) => (
+          <button key={t} role="tab" aria-selected={tab === t} onClick={() => setTab(t)} className={'flex-1 px-0.5 py-2 text-[11px] font-semibold uppercase tracking-normal ' + (tab === t ? 'border-b-2 border-accent text-ink' : 'text-ink-dim hover:text-ink')}>
             {t === 'turns' ? 'Turn order' : t}
           </button>
         ))}
@@ -31,6 +33,7 @@ export function SidePanel({ socket, engine }: { socket: TableSocket; engine: Tab
         {tab === 'party' && <Party engine={engine} />}
         {tab === 'sheets' && <Sheets />}
         {tab === 'journal' && <JournalTab />}
+        {tab === 'minis' && <MiniLibraryPanel socket={socket} />}
       </div>
     </aside>
   );
@@ -112,6 +115,11 @@ function Inspector({ token, socket, engine }: { token: TokenView; socket: TableS
       {token.characterId && <button className="btn mt-2 w-full" onClick={() => useTable.setState({ panelTab: 'sheets', openCharacterId: token.characterId })}>Open character sheet</button>}
       {gm && <div className="mt-2 grid gap-2">
         <CharacterLink token={token} onPick={(id) => patch({ characterId: id })} />
+        <label><span className="label">3D miniature</span>
+          <select className="input" value={token.miniId ?? ''} onChange={(e) => patch({ miniId: e.target.value || null })} aria-label="3D miniature">
+            <option value="">Plain pawn</option>
+            {LIBRARY.items.map((i) => <option key={i.id} value={i.id}>{i.name}</option>)}
+          </select></label>
         <label><span className="label">Controlled by</span>
           <select className="input" multiple size={Math.min(4, Math.max(2, players.length))} value={token.ownerIds} onChange={(e) => patch({ ownerIds: [...e.target.selectedOptions].map((o) => o.value) })} aria-label="Players who control this token">
             {players.length === 0 && <option disabled>Invite players first</option>}
@@ -122,7 +130,7 @@ function Inspector({ token, socket, engine }: { token: TokenView; socket: TableS
           <label className="flex items-center gap-1"><input type="checkbox" checked={token.locked} onChange={(e) => patch({ locked: e.target.checked })} /> Locked</label>
         </div>
         <div className="flex gap-2">
-          <button className="btn flex-1" onClick={() => socket.send({ type: 'token.create', name: token.name, category: token.category as any, color: token.color, x: token.x + 70, y: token.y, size: token.size, hidden: token.hidden, ownerIds: token.ownerIds, assetId: token.assetId })}>Duplicate</button>
+          <button className="btn flex-1" onClick={() => socket.send({ type: 'token.create', name: token.name, category: token.category as any, color: token.color, x: token.x + 70, y: token.y, size: token.size, hidden: token.hidden, ownerIds: token.ownerIds, assetId: token.assetId, miniId: token.miniId, locked: token.locked })}>Duplicate</button>
           <button className="btn flex-1" onClick={() => socket.send({ type: 'init.add', tokenId: token.id, name: token.name || 'Token', initiative: null, hidden: token.hidden, ...(rs.encounter?.initiativeFormula ? { rollExpression: rs.encounter.initiativeFormula } : {}) })}>Add to turns</button>
           <button className="btn btn-danger" onClick={() => confirm('Delete this token?') && socket.send({ type: 'token.delete', id: token.id })}>Delete</button>
         </div>

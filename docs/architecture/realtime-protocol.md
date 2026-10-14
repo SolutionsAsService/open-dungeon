@@ -16,6 +16,10 @@ Schemas: `shared/protocol.ts` (zod for client → server, TypeScript types for s
 ```json
 { "cid": "k3j9x2-17", "cmd": { "type": "token.move", "id": "tok_…", "x": 315, "y": 175, "baseVersion": 3 } }
 ```
+3D view (ADR 0010): tokens carry `miniId` (library model id, `^[a-z0-9][a-z0-9-]{0,63}$`) and use `rotation` as
+facing; `token.create` accepts `miniId` and `locked` (scenery), `token.update` accepts `miniId` from GMs only. The
+3D renderer sends the same `token.move`/`token.update` as 2D, so both views and all players stay in sync.
+
 `cid` is a client-chosen id (≤64 chars). Commands: `token.create | token.move | token.update | token.delete`,
 `map.update`, `fog.add | fog.reset`, `drawing.add | drawing.delete | drawing.clear`, `dice.roll`, `chat.send`,
 `init.add | init.update | init.remove | init.advance | init.reset`, `ping`. Field limits are in the schema

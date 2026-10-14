@@ -1,0 +1,31 @@
+{
+ "format": "open-dungeon.mini-library",
+ "version": 1,
+ "name": "Sample pieces",
+ "items": [
+  {
+   "id": "sample-pillar",
+   "name": "Stone Pillar",
+   "family": "Scenery",
+   "kind": "scenery",
+   "category": "object",
+   "footprintMm": 24,
+   "cells": 1,
+   "heightMm": 48,
+   "model": "sample-pillar.parts.json",
+   "description": "Sample piece bundled with OPEN TABLETOP (simple geometry, CC0)."
+  },
+  {
+   "id": "sample-crate",
+   "name": "Wooden Crate",
+   "family": "Terrain & Scatter",
+   "kind": "scenery",
+   "category": "object",
+   "footprintMm": 22,
+   "cells": 1,
+   "heightMm": 20,
+   "model": "sample-crate.parts.json",
+   "description": "Sample piece bundled with OPEN TABLETOP (simple geometry, CC0)."
+  }
+ ]
+}

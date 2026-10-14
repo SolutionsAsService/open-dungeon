@@ -6,3 +6,7 @@ playwright-report/
 .env
 *.log
 .data-e2e/
+# miniatures imported from the private miniature-viewer (tools/miniatures/import-library.ts); samples are committed
+web/src/minis/library.json
+public/minis/*
+!public/minis/sample-*

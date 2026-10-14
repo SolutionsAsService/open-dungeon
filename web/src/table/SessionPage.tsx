@@ -12,6 +12,8 @@ import { Link } from '../router';
 import { api } from '../api';
 import type { JournalView } from '../../../shared/journal';
 import type { Table3D } from './scene3d';
+import { miniById, MINI_MIME } from '../minis/library';
+import { placeMini } from '../../../shared/minis';
 
 type View = '2d' | '3d';
 /** 2D/3D choice per scene (map), remembered in this browser. */
@@ -61,7 +63,16 @@ export function SessionPage({ sessionId }: { sessionId: string; me: Me }) {
       <TopBar socket={socket} engine={engine} onSetup={() => setSetup(true)} onTogglePanel={() => setPanel((p) => !p)} panelOpen={panel} />
       <div className="relative flex min-h-0 flex-1">
         <Toolbar engine={view === '3d' ? t3d : engine} />
-        <div className="relative min-w-0 flex-1">
+        <div className="relative min-w-0 flex-1" onDragOver={(e) => { if (gm && e.dataTransfer.types.includes(MINI_MIME)) { e.preventDefault(); e.dataTransfer.dropEffect = 'copy'; } }}
+          onDrop={(e) => {
+            const item = miniById(e.dataTransfer.getData(MINI_MIME)), map = useTable.getState().map;
+            if (!item || !map || !gm) return;
+            e.preventDefault();
+            let p = null;
+            if (view === '3d') p = t3d?.clientToMap(e.clientX, e.clientY) ?? null;
+            else if (engine) { const r = engine.app.canvas.getBoundingClientRect(); p = engine.screenToWorld(e.clientX - r.left, e.clientY - r.top); }
+            if (p) socket.send(placeMini(item, p, map.grid));
+          }}>
           <div ref={host} className={'absolute inset-0' + (view === '3d' ? ' invisible' : '')} data-testid="table-canvas" />
           {view === '3d' && <div ref={host3d} className="absolute inset-0" data-testid="table-3d" />}
           <div role="group" aria-label="Table view" className="absolute right-3 top-3 z-10 flex overflow-hidden rounded-lg border border-line bg-panel/95 text-sm shadow-lg">

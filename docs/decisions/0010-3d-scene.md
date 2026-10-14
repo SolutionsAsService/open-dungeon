@@ -21,7 +21,8 @@ three.js from `viewer/<id>.parts.json` (mm, z up).
   GM-only `token.update`; `token.create` also accepts `locked` for scenery.
 - **Library is bundled, not uploaded (v1).** `tools/miniatures/import-library.ts` copies the viewer catalogue into
   `web/src/minis/library.json` (bundled index, zod `MiniLibrary`) and `public/minis/<id>.parts.json` (only name,
-  colour, vertices, triangles). Static files from our own origin: no new upload or fetch trust boundary. This replaces
+  colour, vertices, triangles). Static files from our own origin: no new upload or fetch trust boundary. The imported files are git-ignored because this repo is public and the fantasy designs are private; a
+  committed sample library (two simple pieces) keeps clean checkouts working. This replaces
   ADR 0009's PNG-asset import for 3D; the PNG path and the tile layer stay valid for 2D and remain proposed.
 - **Scenery = locked object tokens.** Terrain pieces (tower, well, treasure) are tokens with `category: 'object'`,
   `locked: true` and a `miniId`, so they reuse ordering, permissions, fog filtering and deletion.

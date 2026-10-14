@@ -13,10 +13,37 @@ import type { TableSocket } from './socket';
 import { assetSrc } from '../api';
 import { GridConfig, worldToCell, cellCenter, hexCorners, snapPoint, type Point } from '../../../shared/grid';
 import { canEditToken, type Role } from '../../../shared/permissions';
-import { mmPerPx, MM_PER_CELL } from '../../../shared/minis';
+import { mmPerPx, MM_PER_CELL, groundFootprint, type MiniItem, type MeshPart } from '../../../shared/minis';
+import { miniById, meshUrl } from '../minis/library';
 import type { TokenView } from '../../../shared/protocol';
 
 const TABLE_MARGIN = 60; // mm of wooden table around the board
+
+interface MiniMesh { parts: { geo: THREE.BufferGeometry; color: string }[] }
+const miniMeshes = new Map<string, Promise<MiniMesh>>();
+const failedMinis = new Set<string>(); // meshes that failed to load fall back to a pawn
+/** Parts mesh (mm, z up) as y-up geometry centred on its ground contact, cached per miniature and never disposed. */
+function loadMini(item: MiniItem): Promise<MiniMesh> {
+  let p = miniMeshes.get(item.id);
+  if (!p) {
+    p = fetch(meshUrl(item)).then((r) => { if (!r.ok) throw new Error('mesh ' + r.status); return r.json(); }).then((parts: MeshPart[]) => {
+      const f = groundFootprint(parts);
+      return { parts: parts.map((part) => {
+        const pos = new Float32Array(part.vertices.length * 3);
+        // model (x, y, z) z-up -> world (x, z, -y): model +y (north) becomes world -Z, the map's up
+        part.vertices.forEach((v, i) => { pos[i * 3] = v[0] - f.cx; pos[i * 3 + 1] = v[2] - f.zMin; pos[i * 3 + 2] = -(v[1] - f.cy); });
+        const geo = new THREE.BufferGeometry();
+        geo.setAttribute('position', new THREE.BufferAttribute(pos, 3));
+        geo.setIndex(part.triangles.flat());
+        geo.computeVertexNormals();
+        geo.userData.shared = true;
+        return { geo, color: part.color ?? '#999999' };
+      }) };
+    });
+    miniMeshes.set(item.id, p);
+  }
+  return p;
+}
 
 interface TokenObj { obj: THREE.Group; key: string; height: number }
 
@@ -265,7 +292,7 @@ export class Table3D {
     for (const t of Object.values(s.tokens)) {
       seen.add(t.id);
       const selected = s.selectedId === t.id;
-      const key = [t.size, t.color, t.name, t.hidden, selected, s.map?.grid.cellSize].join('|');
+      const key = [t.size, t.color, t.name, t.hidden, selected, s.map?.grid.cellSize, t.miniId].join('|');
       let v = this.views.get(t.id);
       if (!v || v.key !== key) {
         if (v) { this.tokensG.remove(v.obj); this.clearGroup(v.obj); }
@@ -282,6 +309,8 @@ export class Table3D {
 
   /** A painted pawn on a round base sized like the 2D token (size cells across), facing north at rotation 0. */
   private buildToken(t: TokenView, selected: boolean, key: string): TokenObj {
+    const item = miniById(t.miniId);
+    if (item && !failedMinis.has(item.id)) return this.buildMini(t, item, selected, key);
     const g = new THREE.Group(); g.userData.tokenId = t.id;
     const r = ((t.size * MM_PER_CELL) / 2) * 0.96, h = 3;
     const opacity = t.hidden ? 0.45 : 1;
@@ -301,6 +330,23 @@ export class Table3D {
     if (selected) g.add(selectionRing(r));
     if (t.name) g.add(label(t.name, height + 4));
     return { obj: g, key, height };
+  }
+
+  /** The library model at print scale (1 cell = 25.4 mm), loaded once and shared by every token using it. */
+  private buildMini(t: TokenView, item: MiniItem, selected: boolean, key: string): TokenObj {
+    const g = new THREE.Group(); g.userData.tokenId = t.id;
+    if (selected) g.add(selectionRing(Math.max(item.footprintMm, item.cells * MM_PER_CELL * 0.9) / 2));
+    if (t.name && item.kind === 'figure') g.add(label(t.name, item.heightMm + 5));
+    loadMini(item).then((m) => {
+      if (this.views.get(t.id)?.obj !== g) return; // replaced or removed while loading
+      for (const p of m.parts) {
+        const mesh = new THREE.Mesh(p.geo, new THREE.MeshStandardMaterial({ color: p.color, roughness: 0.75, metalness: 0.05, transparent: t.hidden, opacity: t.hidden ? 0.45 : 1 }));
+        mesh.castShadow = mesh.receiveShadow = true;
+        g.add(mesh);
+      }
+      this.needsRender = true;
+    }).catch(() => { failedMinis.add(item.id); if (this.views.get(t.id)?.obj === g) { this.views.delete(t.id); this.tokensG.remove(g); this.dirty.tokens = true; } });
+    return { obj: g, key, height: item.heightMm };
   }
 
   private tokenAt(clientX: number, clientY: number): TokenView | null {

@@ -84,6 +84,32 @@ describe('realtime multiplayer', () => {
     expect(moved.event.token.version).toBe(tok.version + 1);
   });
 
+  it('3D minis: tokens carry miniId and facing; owners move and turn them; only the GM swaps the model', async () => {
+    const plId = (await pl.api('GET', '/api/sessions/' + sessionId + '/snapshot')).me.id;
+    gm.send('mi1', { type: 'token.create', name: 'Wanderer', x: 35, y: 105, miniId: 'hooded-wanderer', ownerIds: [plId] });
+    const t = (await pl.waitFor((m) => m.type === 'event' && m.event.type === 'token.upsert' && m.event.token.name === 'Wanderer')).event.token;
+    expect(t).toMatchObject({ miniId: 'hooded-wanderer', locked: false, rotation: 0 });
+    pl.send('mi2', { type: 'token.update', id: t.id, patch: { rotation: 90 }, baseVersion: t.version });
+    expect((await pl.ack('mi2')).ok).toBe(true);
+    const turned = (await gm.waitFor((m) => m.type === 'event' && m.event.type === 'token.upsert' && m.event.token.id === t.id && m.event.token.rotation === 90)).event.token;
+    expect(turned.miniId).toBe('hooded-wanderer');
+    pl.send('mi3', { type: 'token.update', id: t.id, patch: { miniId: 'wizard-tower' }, baseVersion: turned.version });
+    expect((await pl.ack('mi3')).code).toBe('forbidden');
+    gm.send('mi4', { type: 'token.create', name: 'Bad', x: 35, y: 35, miniId: '../etc/passwd' });
+    expect((await gm.ack('mi4')).code).toBe('invalid');
+    gm.send('mi5', { type: 'token.create', name: 'Well', x: 140, y: 140, size: 2, category: 'object', miniId: 'village-well', locked: true });
+    const well = (await gm.waitFor((m) => m.type === 'event' && m.event.type === 'token.upsert' && m.event.token.name === 'Well')).event.token;
+    expect(well).toMatchObject({ locked: true, size: 2, miniId: 'village-well' });
+    pl.send('mi6', { type: 'token.move', id: well.id, x: 210, y: 210, baseVersion: well.version });
+    expect((await pl.ack('mi6')).code).toBe('forbidden');
+    gm.send('mi7', { type: 'token.update', id: well.id, patch: { miniId: null }, baseVersion: well.version });
+    expect((await gm.ack('mi7')).ok).toBe(true);
+    const snap = await gm.api('GET', '/api/sessions/' + sessionId + '/snapshot');
+    expect(snap.tokens.find((x: any) => x.id === t.id)).toMatchObject({ miniId: 'hooded-wanderer', rotation: 90 });
+    expect(snap.tokens.find((x: any) => x.id === well.id).miniId).toBeNull();
+    for (const id of [t.id, well.id]) { gm.send('del-' + id, { type: 'token.delete', id }); await gm.ack('del-' + id); }
+  });
+
   it('resolves concurrent moves deterministically (first wins, loser gets current state)', async () => {
     const snap = await gm.api('GET', '/api/sessions/' + sessionId + '/snapshot');
     const tok = snap.tokens[0];

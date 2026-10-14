@@ -4,7 +4,7 @@
  * 3D scene works in millimetres and converts map pixels with the map's cellSize.
  */
 import { z } from 'zod';
-import type { GridConfig } from './grid';
+import { snapPoint, type GridConfig, type Point } from './grid';
 
 export const MM_PER_CELL = 25.4;
 
@@ -58,6 +58,15 @@ export const MiniLibrary = z.object({
   items: z.array(MiniItem).max(2000),
 });
 export type MiniLibrary = z.infer<typeof MiniLibrary>;
+
+/** token.create for dropping a library item at a map point: snapped by footprint, scenery placed locked. */
+export function placeMini(item: MiniItem, p: Point, grid: GridConfig) {
+  const q = snapPoint(grid, p, item.cells);
+  return {
+    type: 'token.create' as const, name: item.name, category: item.category, color: item.kind === 'scenery' ? '#6b5a45' : '#c0392b',
+    x: Math.round(q.x * 100) / 100, y: Math.round(q.y * 100) / 100, size: item.cells, miniId: item.id, locked: item.kind === 'scenery',
+  };
+}
 
 /** Library entry for one miniature-viewer catalogue model and its parts mesh. */
 export function libraryItem(model: { id: string; name: string; family?: string; description?: string }, parts: MeshPart[], source?: { repo: string; path: string }): MiniItem {

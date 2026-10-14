@@ -27,6 +27,12 @@ docs/implementation/checklist.md.
 
 Later: asset library page, walls/lighting/vision, fog-masked background delivery, ruleset editor, voice/video.
 
+## Built: 3D table and miniature library (ADR 0010)
+Per-scene 2D/3D toggle; three.js table at print scale (1 cell = 25.4 mm); bundled miniature library imported from
+miniature-viewer (`npx tsx tools/miniatures/import-library.ts ../miniature-viewer`); drag a mini from the Minis tab onto
+the 2D or 3D table; tokens shared between views (`miniId`, facing). See
+[docs/integration/3d-table.md](../integration/3d-table.md).
+
 ## Proposed: miniatures and terrain
 Printable miniatures and 1 in terrain tiles as VTT assets, a library manifest import, and a tile layer for building
 maps from terrain pieces: [docs/integration/miniatures-and-terrain.md](../integration/miniatures-and-terrain.md)

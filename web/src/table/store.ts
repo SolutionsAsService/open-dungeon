@@ -33,7 +33,7 @@ export interface TableState {
   fogMode: 'reveal' | 'hide';
   newToken: { name: string; category: string; color: string };
   fatalError: string | null;
-  panelTab: 'chat' | 'turns' | 'party' | 'sheets' | 'journal';
+  panelTab: 'chat' | 'turns' | 'party' | 'sheets' | 'journal' | 'minis';
   openCharacterId: string | null;
   /** Journal entries this user may read (null until loaded); kept live by journal.* events. */
   journal: JournalView[] | null;

@@ -33,7 +33,7 @@ const EVENT_RETENTION = 1000;
 const tokenView = (r: any): TokenView => ({
   id: r.id, mapId: r.map_id, name: r.name, category: r.category, assetId: r.asset_id, color: r.color,
   x: Number(r.x), y: Number(r.y), rotation: Number(r.rotation), size: Number(r.size), hidden: r.hidden, locked: r.locked,
-  ownerIds: r.owner_ids ?? [], hp: r.hp, hpMax: r.hp_max, conditions: r.conditions ?? [], characterId: r.character_id ?? null, version: r.version,
+  ownerIds: r.owner_ids ?? [], hp: r.hp, hpMax: r.hp_max, conditions: r.conditions ?? [], characterId: r.character_id ?? null, miniId: r.mini_id ?? null, version: r.version,
 });
 const mapView = (r: any): MapView => ({ id: r.id, name: r.name, backgroundAssetId: r.background_asset_id, width: r.width, height: r.height, grid: GridConfig.parse(r.grid), fogEnabled: r.fog_enabled, version: r.version });
 const fogView = (r: any): FogRegionView => ({ id: r.id, mode: r.mode, shape: r.shape });
@@ -319,8 +319,8 @@ export class Services {
       case 'token.create': {
         if (!can(role, 'token.create')) deny('Only the GM can place tokens');
         const id = newId('tok');
-        const r = (await t.query('INSERT INTO tokens (id, map_id, name, category, color, x, y, size, hidden, owner_ids, asset_id) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11) RETURNING *',
-          [id, mapId, cmd.name, cmd.category, cmd.color, cmd.x, cmd.y, cmd.size, cmd.hidden, cmd.ownerIds, cmd.assetId]))[0];
+        const r = (await t.query('INSERT INTO tokens (id, map_id, name, category, color, x, y, size, hidden, owner_ids, asset_id, mini_id, locked) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13) RETURNING *',
+          [id, mapId, cmd.name, cmd.category, cmd.color, cmd.x, cmd.y, cmd.size, cmd.hidden, cmd.ownerIds, cmd.assetId, cmd.miniId, cmd.locked]))[0];
         return [await this.tokenEffect(t, mapId, [tokenView(r)])];
       }
       case 'token.move': {
@@ -337,10 +337,10 @@ export class Services {
         const tok = await loadToken(cmd.id);
         if (!canEditToken(role, userId, tok)) deny('You can only edit your own tokens');
         const p = cmd.patch;
-        const gmOnlyFields: (keyof typeof p)[] = ['hidden', 'locked', 'ownerIds', 'category', 'characterId'];
-        if (!isGmRole(role) && gmOnlyFields.some((k) => p[k] !== undefined)) deny('Only the GM can change visibility, locking, ownership, category or linked character');
+        const gmOnlyFields: (keyof typeof p)[] = ['hidden', 'locked', 'ownerIds', 'category', 'characterId', 'miniId'];
+        if (!isGmRole(role) && gmOnlyFields.some((k) => p[k] !== undefined)) deny('Only the GM can change visibility, locking, ownership, category, linked character or miniature');
         if (cmd.baseVersion !== tok.version) throw new CommandError('stale', 'This token changed before your edit arrived', tok);
-        const cols: Record<string, string> = { name: 'name', category: 'category', color: 'color', rotation: 'rotation', size: 'size', hidden: 'hidden', locked: 'locked', ownerIds: 'owner_ids', hp: 'hp', hpMax: 'hp_max', conditions: 'conditions', assetId: 'asset_id', characterId: 'character_id' };
+        const cols: Record<string, string> = { name: 'name', category: 'category', color: 'color', rotation: 'rotation', size: 'size', hidden: 'hidden', locked: 'locked', ownerIds: 'owner_ids', hp: 'hp', hpMax: 'hp_max', conditions: 'conditions', assetId: 'asset_id', characterId: 'character_id', miniId: 'mini_id' };
         const sets: string[] = []; const vals: unknown[] = [cmd.id];
         for (const [k, col] of Object.entries(cols)) if ((p as any)[k] !== undefined) { vals.push((p as any)[k]); sets.push(col + ' = $' + vals.length); }
         if (p.ownerIds) {

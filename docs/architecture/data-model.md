@@ -15,7 +15,7 @@ Schema source of truth: `server/db/migrations/*.sql` (applied in filename order,
 | assets | uploaded files' metadata | mime (sniffed), bytes, width, height, storage_key, license, attribution |
 | maps | static map config | background_asset_id, width, height, grid (JSONB, validated by `GridConfig`), fog_enabled, version |
 | game_sessions | one table event | status ∈ open, paused, closed; active_map_id; seq (per-session event counter) |
-| tokens | placed token instances (hot state) | map_id, x, y, rotation, size, hidden, locked, owner_ids TEXT[], hp, hp_max, conditions TEXT[], attributes JSONB, character_id (0002, nullable link), version |
+| tokens | placed token instances (hot state) | map_id, x, y, rotation, size, hidden, locked, owner_ids TEXT[], hp, hp_max, conditions TEXT[], attributes JSONB, character_id (0002, nullable link), mini_id (0004, 3D model id from the miniature library, nullable), version |
 | fog_regions | ordered reveal/hide shapes | mode ∈ reveal, hide; shape JSONB (`FogShape`) |
 | drawings | annotations | author_id, gm_only, shape JSONB (`DrawingShape`), expires_at (temporary) |
 | dice_rolls | server-authoritative rolls | expression, result JSONB (per-die terms + label), total, visibility ∈ public, gm, self |
