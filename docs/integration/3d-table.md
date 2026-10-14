@@ -23,6 +23,10 @@ real print size, so a 25 mm based figure fills one square and the wizard tower s
 the mesh's ground contact: up to 42 mm (25/32/40 mm bases) = 1 square, larger = the nearest whole number of squares,
 at least 2 x 2 (`cellsForBase` in `shared/minis.ts`).
 
+## Private library and uploads
+See ADR [0011](../decisions/0011-private-minis-and-uploads.md): the server can read private viewer catalogues
+(`MINI_LIBRARY_SOURCES`) and members can upload STL/OBJ/glTF figures (`shared/meshimport.ts`, Minis tab → Upload).
+
 ## Library import
 ```bash
 npx tsx tools/miniatures/import-library.ts ../miniature-viewer
@@ -40,7 +44,8 @@ owner's decision (make the meshes public, or build/deploy from a private checkou
 
 ## How it fits
 - `web/src/table/scene3d.ts` is a second renderer over the same Zustand store as the PixiJS engine (lazy chunk).
-  Map px (x, y) become world (x, z) mm; model z-up becomes world y-up with model +y facing north (map up).
+  Map px (x, y) become world (x, z) mm; model z-up becomes world y-up with model +y pointing north (map up), so a
+  model's front (CAD -y) faces south — toward the players' edge — at rotation 0. Pawns and the 2D facing tick agree.
 - Board: wooden table, ground from the map's background image or a flagstone texture with one stone per cell, grid
   lines (square or hex), a dark fog sheet (GMs see it at 50 %), hemisphere + shadowed sun light.
 - Only protocol change: `miniId` on tokens (migration `0004_token_mini.sql`), plus `locked` on `token.create`.
@@ -52,5 +57,5 @@ swap, locked scenery, invalid ids). Visual check: headless Chrome with SwiftShad
 docs/development/testing.md).
 
 ## Not yet
-A real wall layer (walls/vision roadmap; also UVTT import) to replace drawings-as-walls; doors. Measuring, drawing and fog painting in 3D (switch to 2D); user-uploaded models; hex-shaped bases; token art in 3D;
+A real wall layer (walls/vision roadmap; also UVTT import) to replace drawings-as-walls; doors. Measuring, drawing and fog painting in 3D (switch to 2D); hex-shaped bases; token art in 3D;
 pings are sent but not drawn in 3D.

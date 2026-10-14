@@ -229,8 +229,8 @@ export class TableEngine {
       const g = v.ring; g.clear();
       g.circle(0, 0, r + 4).fill({ color: 0x000000, alpha: 0.35 });
       g.circle(0, 0, r).fill({ color: hex(t.color) });
-      if (!t.assetId) { // facing tick so rotation is visible without artwork
-        const a = ((t.rotation - 90) * Math.PI) / 180;
+      if (!t.assetId) { // facing tick; rotation 0 faces south (the bottom edge), like the 3D figures
+        const a = ((t.rotation + 90) * Math.PI) / 180;
         g.moveTo(0, 0).lineTo(Math.cos(a) * r * 0.9, Math.sin(a) * r * 0.9).stroke({ width: Math.max(2, r / 10), color: 0xffffff, alpha: 0.7 });
       }
       g.circle(0, 0, r).stroke({ width: Math.max(2, r / 12), color: activeTokenId === t.id ? 0xf1c40f : 0x1b1714 });

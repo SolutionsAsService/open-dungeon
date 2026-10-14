@@ -15,7 +15,7 @@ import { GridConfig, worldToCell, cellCenter, hexCorners, snapPoint, type Point 
 import { canEditToken, type Role } from '../../../shared/permissions';
 import { isPointRevealed } from '../../../shared/fog';
 import { mmPerPx, MM_PER_CELL, groundFootprint, wallSegments, type MiniItem, type MeshPart } from '../../../shared/minis';
-import { miniById, fetchMesh, useMinis, type MiniEntry } from '../minis/library';
+import { miniById, fetchMesh, useMinis, ensureMini, type MiniEntry } from '../minis/library';
 import type { TokenView } from '../../../shared/protocol';
 
 const TABLE_MARGIN = 60; // mm of wooden table around the board
@@ -31,7 +31,8 @@ function loadMini(item: MiniEntry): Promise<MiniMesh> {
       const f = groundFootprint(parts);
       return { parts: parts.map((part) => {
         const pos = new Float32Array(part.vertices.length * 3);
-        // model (x, y, z) z-up -> world (x, z, -y): model +y (north) becomes world -Z, the map's up
+        // model (x, y, z) z-up -> world (x, z, -y): model +y becomes world -Z (north), so a CAD model's front (-y)
+        // faces south, toward the players' edge, at rotation 0 (the 2D facing tick points the same way)
         part.vertices.forEach((v, i) => { pos[i * 3] = v[0] - f.cx; pos[i * 3 + 1] = v[2] - f.zMin; pos[i * 3 + 2] = -(v[1] - f.cy); });
         const geo = new THREE.BufferGeometry();
         geo.setAttribute('position', new THREE.BufferAttribute(pos, 3));
@@ -332,9 +333,10 @@ export class Table3D {
     for (const [id, v] of this.views) if (!seen.has(id)) { this.tokensG.remove(v.obj); this.clearGroup(v.obj); this.views.delete(id); }
   }
 
-  /** A painted pawn on a round base sized like the 2D token (size cells across), facing north at rotation 0. */
+  /** A painted pawn on a round base sized like the 2D token (size cells across), facing south (toward the players' edge) at rotation 0. */
   private buildToken(t: TokenView, selected: boolean, key: string): TokenObj {
     const item = miniById(t.miniId);
+    if (!item) ensureMini(t.miniId);
     if (item && !failedMinis.has(item.url)) return this.buildMini(t, item, selected, key);
     const g = new THREE.Group(); g.userData.tokenId = t.id;
     const r = ((t.size * MM_PER_CELL) / 2) * 0.96, h = 3;
@@ -349,7 +351,7 @@ export class Table3D {
     const head = new THREE.Mesh(new THREE.SphereGeometry(r * 0.3, 24, 16), std(t.color));
     head.position.y = h + r * 1.5;
     const nose = new THREE.Mesh(new THREE.ConeGeometry(r * 0.12, r * 0.5, 12), std(0xf3ead8));
-    nose.rotation.x = -Math.PI / 2; nose.position.set(0, h + 0.8, -r * 0.7); // facing tick, like the 2D one
+    nose.rotation.x = Math.PI / 2; nose.position.set(0, h + 0.8, r * 0.7); // facing tick (+Z = south), like the 2D one
     for (const m of [base, top, body, head, nose]) { m.castShadow = true; m.receiveShadow = true; g.add(m); }
     const height = h + r * 1.8;
     if (selected) g.add(selectionRing(r));
@@ -458,16 +460,19 @@ function selectionRing(r: number) {
   return ring;
 }
 
-/** Name tag that always faces the camera. */
+/** Name tag that always faces the camera: 10 mm tall letters on a dark pill, width fitted to the name. */
 function label(text: string, y: number) {
-  const cv = document.createElement('canvas'); cv.width = 256; cv.height = 64;
-  const ctx = cv.getContext('2d')!;
-  ctx.font = '600 30px system-ui, sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-  ctx.lineWidth = 6; ctx.strokeStyle = '#000'; ctx.strokeText(text, 128, 32, 248);
-  ctx.fillStyle = '#fff'; ctx.fillText(text, 128, 32, 248);
-  const tex = new THREE.CanvasTexture(cv); tex.colorSpace = THREE.SRGBColorSpace;
-  const sp = new THREE.Sprite(new THREE.SpriteMaterial({ map: tex, depthWrite: false }));
-  sp.scale.set(24, 6, 1); sp.position.y = y; sp.renderOrder = 3;
+  const H = 96, font = '700 64px system-ui, sans-serif';
+  const cv = document.createElement('canvas'), ctx = cv.getContext('2d')!;
+  ctx.font = font;
+  cv.width = Math.min(1024, Math.ceil(ctx.measureText(text).width) + 48); cv.height = H;
+  ctx.font = font; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  ctx.fillStyle = 'rgba(10,8,6,0.72)'; ctx.beginPath(); ctx.roundRect(0, 0, cv.width, H, H / 2); ctx.fill();
+  ctx.lineWidth = 8; ctx.strokeStyle = '#000'; ctx.strokeText(text, cv.width / 2, H / 2 + 3, cv.width - 32);
+  ctx.fillStyle = '#fff'; ctx.fillText(text, cv.width / 2, H / 2 + 3, cv.width - 32);
+  const tex = new THREE.CanvasTexture(cv); tex.colorSpace = THREE.SRGBColorSpace; tex.anisotropy = 4;
+  const sp = new THREE.Sprite(new THREE.SpriteMaterial({ map: tex, depthWrite: false, depthTest: false }));
+  const h = 12; sp.scale.set((h * cv.width) / H, h, 1); sp.position.y = y + h / 2; sp.renderOrder = 3;
   return sp;
 }
 
